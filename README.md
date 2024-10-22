@@ -62,7 +62,7 @@ This plugin has a host of settings to customize the appearence and sorting. Sett
 - Sorting does make the sidebar perform worse than with sorting off, it's not really noticable unless you have a lot of LoRAs though
 - Sometimes with large LoRA libraries the sidebar won't load everything right, closing and reopening it fixes it (or hitting the X button on the search box) - this doesn't affect searching at all
 - Sliders don't really look great and they don't use the right node. If you have sliders and use them frequently I strong suggest looking into one of my other sidebars - https://github.com/Kinglord/ComfyUI_Slider_Sidebar
-- Again, this isn't a LoRA management tool so it's not made to help you manage your LoRA files
+- This isn't a LoRA management tool so it's not made to help you manage your LoRA files
 - With large datasets it can cause some timeouts, they are harmless but they do clutter the server logs a bit
 
 ## Requirements
