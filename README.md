@@ -9,7 +9,7 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 - Sidebar that automatically generates a visual library of all your LoRA models
 - Designed to be super fast for searches
 - Easily filter LoRAs by base model (and any search term, obviously)
-- View LoRA details via LoRA Info popup, includes important informant and include easy to copy trained words and tags
+- View LoRA details via LoRA Info popup, includes important model info and has easy to copy trained words and tags
 - Drag and drop LoRAs to create or update LoRA nodes on the canvas
   - Drag and drop images from the LoRA viewer to load entire workflows (if included)
 - Categorize and sort your LoRAs in multiple ways such as folder structure and automatic or custom tags
