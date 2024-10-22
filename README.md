@@ -11,7 +11,7 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 - Easily filter LoRAs by base model (and any search term, obviously)
 - View LoRA details via LoRA Info popup, includes important model info and has easy to copy trained words and tags
 - Drag and drop LoRAs to create or update LoRA nodes on the canvas
-  - Drag and drop images from the LoRA viewer to load entire workflows (if included)
+  - Drag and drop images from the LoRA Info popup to load entire workflows (if metadata exists)
 - Categorize and sort your LoRAs in multiple ways such as folder structure and automatic or custom tags
 - Works with custom LoRAs - see usage notes below
 - Provides NSFW protection for all those LoRAs that you don't remember downloading 😁
