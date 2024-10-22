@@ -83,7 +83,7 @@ This plugin has a host of settings to customize the appearence and sorting. Sett
 ## Why
 ![image](https://media1.tenor.com/m/wSGnuU9TOFgAAAAC/all-the-things-hyperbole-and-a-half.gif)
 
-There have been other solutions for dealing with LoRAs visually in ComfyUI, but none of them hit the mark for me, and most of them made working with LoRAs slower than normal. I wanted to make smething that made working with LoRAs easier and faster, without any added bloat. I actually had worked on this and stoped when I heard about the new built-in model browser. However, I used it a few days ago and I have too many LoRAs and it crashed the front end. So, I wouldn't recommend trying to use that if you have a bunch like I do. This plugin was designed for true LoRA "power users" and to make their lives easier in ComfyUI.
+There have been other solutions for dealing with LoRAs visually in ComfyUI, but none of them hit the mark for me, and most of them made working with LoRAs slower than normal. I wanted something that made working with LoRAs easier and faster, without any added bloat. I actually had worked on this and stopped when I heard about the new built-in model browser. However, I used it a few days ago and I have too many LoRAs and it crashed the front end. So, I wouldn't recommend trying to use that if you have a bunch like I do. 😄 This plugin was designed for true LoRA "power users" and to make their lives easier in ComfyUI.
 
 ## Credits
 **LoRA Creators for all the great content they produce!**
