@@ -75,6 +75,7 @@ This plugin has a host of settings to customize the appearence and sorting. Sett
 
 ## Roadmap
 - [ ] Adding support for more LoRA nodes outside of ComfyUI Core - just open an issue for me to add them
+- [ ] Custom category sorting
 - [ ] Look into fixing timeouts with large datasets so the server logs don't get spammed
 - [ ] Investigate some ways to improve performance when using categories
 - [ ] Whatever bugs you find / features you submit
