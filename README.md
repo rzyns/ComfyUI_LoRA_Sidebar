@@ -35,7 +35,7 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 *NOTE - This sidebar will process and download images into the loraData directory within the custom node. This is so everything can be fast, but it does take ~1MB of space per 10 LoRAs. A collection of ~9500 LoRAs was ~1GB.*
 
 ## Usage
-<img align="right" src="https://github.com/user-attachments/assets/32b9a961-e3a1-4d9f-bd87-6970138f1c47" height=550>
+<img align="right" src="https://github.com/user-attachments/assets/32b9a961-e3a1-4d9f-bd87-6970138f1c47" height=600>
 
 - Open the sidebar and start the initial import / process of your LoRAs
   - If you have a lot of LoRAs this can take a while. The reason this is so slow is because I've used **SAFE** rate limits for the CivitAI API. If you know where to look in the code you can change it, but I don't recommend it. The process will run the background and if you close Comfy before it finishes it will resume where it left off.
