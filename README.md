@@ -36,7 +36,7 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 - After install you probably want to go into Lora Sidebar Settings and configure things to your liking. If you have a very large collection and want to use categories I suggest using the collapsed default setting.
 - The sidebar will automatically detect and start to process all your LoRAs when you open it. This can take a while!
 
-*NOTE - This sidebar will process and download images into the loraData directory within the custom node. This is so everything can be fast, but it does take ~1MB of space per 10 LoRAs. A collection of ~9500 LoRAs was ~1GB.*
+*NOTE - The sidebar will process and download metadata and images from Civitai into the loraData directory within the custom node folder - but ONLY if external data doesn't already exist! This is so everything can be fast, but it does take ~1MB of space per 10 LoRAs. A collection of ~9500 LoRAs was ~1GB.*
 
 ## Usage
 <img align="right" src="https://github.com/user-attachments/assets/32b9a961-e3a1-4d9f-bd87-6970138f1c47" height=600>
