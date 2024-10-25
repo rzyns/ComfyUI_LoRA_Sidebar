@@ -1,10 +1,16 @@
 # ComfyUI_LoRA_Sidebar
-## IF YOU ALREADY HAVE LORA INFO AND PREVIEW IMAGES DOWNLOADED FROM ANOTHER PLUGIN WAIT FOR THE NEW VERSION!
+### NEW VERSION SUPPORTS EXTERNAL DATA!
 ## What is this?
 A custom front-end UX node that creates a visual library of all your LoRAs. It's designed to be fast, slim, and make using LoRAs in Comfy a lot more fun for visual users - especially if you have lots of LoRAs. Should make people used to A1111 and other UI heavy platforms feel more at home. If you've got lots of LoRAs, this sidebar could be your new best friend!
 
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
+## Updates
+- Now supports using existing data and images that follow the civitai.info format. This will reduce duplication and also greatly speed up processing of LoRAs that already have this information locally.
+- Fixed a bug with the way subdirs were calculated, now drag and drop should be much more reliable!
+- Added detection for old data files and reprocessing logic, I won't change this unless I have to, but being able to check it is important (cause I changed it this time 😛)
+- Overhaul of stored data to lay groundwork for future updates
+- Can now search for Lycoris in the search box to quickly find all your lycos! 🥳
 
 ## Features
 - Sidebar that automatically generates a visual library of all your LoRA models
@@ -19,9 +25,6 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 - Battle tested with very large (9000+ models) LoRA libraries
 - Supports symlinks!
 - Supports video preview files, because why not
-
-## Updates
-- Initial Release
 
 ## Installation
 ### Registry / Manager
