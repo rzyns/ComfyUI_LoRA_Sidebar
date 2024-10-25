@@ -83,6 +83,8 @@ This plugin has a host of settings to customize the appearence and sorting. Sett
 - [ ] Look into fixing timeouts with large datasets so the server logs don't get spammed
 - [ ] Investigate some ways to improve performance when using categories
 - [ ] Whatever bugs you find / features you submit
+- [X] Support searching by model type (LoRA or Lycoris)
+- [X] Support external data to speed up processing and reduce duplication
 - [X] Fix LoRA processor from grabbing hidden system files
 
 ## Why
