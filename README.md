@@ -6,7 +6,7 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
 ## Updates
-- Now supports using existing data and images that follow the civitai.info format, this reduces duplication and also greatly speed up processing of LoRAs that have it
+- Now supports using existing data and images that follow the civitai.info format, this reduces duplication and also greatly speeds up processing of LoRAs that have it
 - Fixed a bug with the way subdirs were calculated, now drag and drop should be much more reliable
 - Added detection for old data files and reprocessing logic, I won't change this unless I have to, but being able to check it is important (cause I changed it this time 😛)
 - Overhaul of stored data to lay groundwork for future updates
