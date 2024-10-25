@@ -238,8 +238,9 @@ class LoraSidebar {
                     const trainedWordsMatch = Array.isArray(lora.trained_words) && lora.trained_words.some(word => word.toLowerCase().includes(term));
                     const baseModelMatch = lora.baseModel && lora.baseModel.toLowerCase().includes(term);
                     const subdirMatch = lora.subdir && lora.subdir.toLowerCase().includes(term);
+                    const typeMatch = lora.type && lora.type.toLowerCase().includes(term);
     
-                    return nameMatch || tagMatch || trainedWordsMatch || baseModelMatch || subdirMatch;
+                    return nameMatch || tagMatch || trainedWordsMatch || baseModelMatch || subdirMatch || typeMatch;
                 });
     
                 // Model filter
@@ -486,9 +487,11 @@ class LoraSidebar {
                 }
             }, [
                 $el("h3", "Process LoRAs"),
-                $el("p", `Found ${count} new LoRAs to process.`),
+                $el("p", `Found ${count} LoRAs to process.`),
                 $el("p", `Estimated processing time: ${estimatedTimeStr}.`),
-                $el("p", "This process can take a lot of time with large amounts of loras. (This is for your protection so CivitAI doesn't ban your IP!) You are free to close the sidebar and use Comfy normally while this processes. If you need to quit this progress is saved and can be resumed later."),
+                $el("p", "This process can take a lot of time with large amounts of loras. (This is for your protection so CivitAI doesn't ban your IP!) If you have local metadata, it will be used for processing and speed things up considerably. (Minutes vs Hours for large data sets)"),
+                $el("p", "You are free to close the sidebar and use Comfy normally while this processes. If you need to quit, progress is saved and can be resumed later."),
+                $el("p", "If this is asking to process older LoRA files again, it means I had to make a data change. (Sorry) You can Cancel this process for now but you won't have new features (or LoRAs) until you hit OK."),
                 $el("div", {
                     style: {
                         display: "flex",
@@ -615,7 +618,7 @@ class LoraSidebar {
         }
     }
 
-    async loadLoraData(offset = 0, limit = 500) {
+    async loadLoraData(offset = 0, limit = this.batchSize) {
         try {
             const response = await api.fetchApi(`/lora_sidebar/data?offset=${offset}&limit=${limit}`);
             if (response.ok) {
@@ -1881,7 +1884,7 @@ app.registerExtension({
         app.ui.settings.addSetting({
             id: "LoRA Sidebar.General.customTags",
             name: "Custom Category Tags",
-            tooltip : 'Comma seperated list of tags, each Lora will only be assigned 1 category',
+            tooltip : 'Comma seperated list of tags, each Lora will only be assigned to 1 category',
             type: 'text',
             defaultValue: 'character, style, concept, clothing, poses, background',
             onChange: (newVal, oldVal) => {
@@ -1907,10 +1910,10 @@ app.registerExtension({
         app.ui.settings.addSetting({
             id: "LoRA Sidebar.General.batchSize",
             name: "LoRA Loading Batch Size",
-            tooltip : 'If you have tons of LoRAs and good hardware you can push this up to 5k',
+            tooltip : 'If you have tons of LoRAs but good hardware (and SSDs) you can push this up to 5k or more',
             type: "slider",
             defaultValue: 500,
-            attrs: { min: 250, max: 5000, step: 250, },
+            attrs: { min: 250, max: 10000, step: 250, },
             onChange: (newVal, oldVal) => {
                 if (app.loraSidebar && oldVal !== undefined) {
                     app.loraSidebar.updateBatchSize(newVal);

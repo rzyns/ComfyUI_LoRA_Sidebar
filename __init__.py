@@ -50,6 +50,7 @@ TEST_LIMIT = 0
 
 # Add a global variable to track if processing is in progress
 is_processing = False
+PROCESSED_LORAS_VERSION = 2  # used to force reprocessing LoRAs when data files change
 LORA_FILE_INFO = {}
 
 # hack for lora processing
@@ -71,7 +72,7 @@ class LoraDataStore:
     @classmethod
     def get_data(cls):
         cls._instance = cls()
-        print(f"Data retrieved from LoraDataStore: {cls._instance.data}")
+        logger.info(f"Data retrieved from LoraDataStore: {cls._instance.data}")
         return cls._instance.data
 
     @classmethod
@@ -107,6 +108,43 @@ async def hash_file(filepath):
         for byte_block in iter(lambda: f.read(4096), b""):
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
+
+async def check_local_civitai_info(file_path):
+    info_path = f"{os.path.splitext(file_path)[0]}.civitai.info"
+
+    logger.info(f"Checking for local metadata at: {info_path}")
+    
+    if not os.path.exists(info_path):
+        logger.info(f"No local metadata found at: {info_path}")
+        return False
+        
+    try:
+        logger.info(f"Found local metadata file, attempting to read: {info_path}")
+        with open(info_path, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+            
+        # Convert the CivitAI model info format to match version endpoint format
+        return {
+            "modelId": metadata.get("modelId"),
+            "id": metadata.get("id"),  # Version ID from the info
+            "name": metadata.get("name"), # Version name
+            "model": {
+                "name": metadata.get("model", {}).get("name"),
+                "nsfw": metadata.get("model", {}).get("nsfw", False),
+                "tags": metadata.get("model", {}).get("tags", []),
+                "description": metadata.get("model", {}).get("description"),  # Model description
+                "type": metadata.get("model", {}).get("type")
+            },
+            "trainedWords": metadata.get("trainedWords", []),
+            "baseModel": metadata.get("baseModel"),
+            "description": metadata.get("description"),  # Version description
+            "images": metadata.get("images", []),
+            "local_metadata": True  # Add our flag
+        }
+    
+    except Exception as e:
+        logger.error(f"Error reading civitai.info for {file_path}: {str(e)}")
+        return False
 
 async def fetch_model_info(session, model_id):
     url = f"https://civitai.com/api/v1/models/{model_id}"
@@ -162,35 +200,58 @@ async def copy_placeholder_as_preview(lora_id):
             logger.info(f"Preview already exists for LoRA {lora_id}: {preview_path}")
 
 def get_subdir(file_path):
-    # Split the drive from the file path (if there is one)
-    file_drive, file_path_tail = os.path.splitdrive(file_path)
-    current_drive = os.path.splitdrive(os.getcwd())[0]
-
-    # If the file is on a different drive, fake it to be on the same drive
-    if file_drive != current_drive:
-        fake_file_path = os.path.join(current_drive, file_path_tail)
-    else:
-        fake_file_path = file_path
-
-    subdir = os.path.relpath(os.path.dirname(fake_file_path))
-
-    # Split and remove the first two directory levels cause Comfy
-    subdir_parts = subdir.split(os.sep)
-    if len(subdir_parts) > 2:
-        subdir = os.sep.join(subdir_parts[2:])
-    else:
-        subdir = os.sep.join(subdir_parts)
-
-    # Remove 'loras\\' prefix if it exists (for root loras directory)
-    if subdir.startswith('loras\\'):
-        subdir = subdir[6:]  # Remove the first 6 characters ('loras\\')
-
-    return subdir
+    """Get the subdirectory relative to the lora base path."""
+    try:
+        # Get all possible lora directories from folder_paths
+        lora_dirs = folder_paths.get_folder_paths("loras")
+        if not lora_dirs:
+            return ""
+            
+        # Normalize the input path
+        norm_path = os.path.normpath(file_path)
+        
+        # Handle cross-drive path comparison by normalizing drive letters
+        file_drive, file_path_tail = os.path.splitdrive(norm_path)
+        
+        # Find the matching base directory
+        matching_base = None
+        for base_dir in lora_dirs:
+            base_dir = os.path.normpath(base_dir)
+            base_drive, base_path_tail = os.path.splitdrive(base_dir)
+            
+            # Create drive-letter-neutral paths for comparison
+            neutral_file_path = os.path.join("C:", file_path_tail)
+            neutral_base_path = os.path.join("C:", base_path_tail)
+            
+            if neutral_file_path.startswith(neutral_base_path):
+                if matching_base is None or len(base_dir) > len(matching_base):
+                    matching_base = base_dir
+        
+        if not matching_base:
+            return ""
+            
+        # Use the same drive letter neutralization for relpath calculation
+        _, match_path_tail = os.path.splitdrive(matching_base)
+        neutral_match_path = os.path.join("C:", match_path_tail)
+        neutral_file_path = os.path.join("C:", file_path_tail)
+        
+        # Get relative path using neutralized paths
+        rel_path = os.path.relpath(os.path.dirname(neutral_file_path), neutral_match_path)
+        
+        # Return empty string for root directory
+        if rel_path == ".":
+            return ""
+            
+        return rel_path
+            
+    except Exception as e:
+        logging.error(f"Error in get_subdir: {str(e)}")
+        return ""
 
 @PromptServer.instance.routes.get("/lora_sidebar/loras/list")
 async def list_loras(request):
     global LORA_FILE_INFO
-    logger.info("Pulling LoRA list from route:", request.path)
+    logger.info(f"Pulling LoRA list from route: {request.path}")
     logger.info("Pulling LoRA list")
     lora_dirs = folder_paths.get_folder_paths("loras")
     lora_files = []
@@ -228,14 +289,53 @@ async def list_loras(request):
 
 @PromptServer.instance.routes.get("/lora_sidebar/preview/{lora_name}")
 async def get_lora_preview(request):
+    """Load preview media with proper MIME type handling."""
     lora_name = request.match_info['lora_name']
+    
+    def get_content_type(filepath):
+        ext = os.path.splitext(filepath)[1].lower()
+        content_types = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.mp4': 'video/mp4',
+            '.webm': 'video/webm'
+        }
+        return content_types.get(ext, 'application/octet-stream')
+    
+    # First check if this LoRA uses local metadata
+    info_path = os.path.join(LORA_DATA_DIR, lora_name, "info.json")
+    if os.path.exists(info_path):
+        with open(info_path, "r", encoding="utf-8") as f:
+            info = json.load(f)
+            if info.get("local_metadata") and info.get("path"):
+                base_path = os.path.splitext(info["path"])[0]
+                for ext in ['.preview.png', '.preview.jpg', '.preview.mp4', '.preview.webm']:
+                    preview_path = f"{base_path}{ext}"
+                    if os.path.exists(preview_path):
+                        return web.FileResponse(
+                            preview_path,
+                            headers={"Content-Type": get_content_type(preview_path)}
+                        )
+    
+    # Look in managed folder
     lora_folder = os.path.join(LORA_DATA_DIR, lora_name)
-    for ext in ['.jpg', '.png', '.jpeg', '.mp4']:
+    for ext in ['.jpg', '.png', '.jpeg', '.mp4', '.webm']:
         preview_path = os.path.join(lora_folder, f"preview{ext}")
         if os.path.exists(preview_path):
-            return web.FileResponse(preview_path)
+            return web.FileResponse(
+                preview_path,
+                headers={"Content-Type": get_content_type(preview_path)}
+            )
     
-    # If no preview found, return 404
+    # Fallback to placeholder
+    placeholder_path = os.path.join(LORA_DATA_DIR, "placeholder.jpeg")
+    if os.path.exists(placeholder_path):
+        return web.FileResponse(
+            placeholder_path,
+            headers={"Content-Type": "image/jpeg"}
+        )
+    
     return web.Response(status=404)
 
 @PromptServer.instance.routes.get("/lora_sidebar/placeholder")
@@ -250,25 +350,47 @@ async def get_unprocessed_count(request):
     logger.info("Starting fresh: Scanning for unprocessed LoRAs")
 
     processed_loras_file = os.path.join(LORA_DATA_DIR, "processed_loras.json")
+    
+    # Get the current LoRA files first
+    lora_files = await list_loras(request)
+    current_lora_names = [os.path.splitext(lf['filename'])[0].strip() for lf in lora_files]
 
-    # Load processed LoRAs
+    # Check version and handle existing data
     if os.path.exists(processed_loras_file):
         with io.open(processed_loras_file, "r", encoding="utf-8") as f:
             try:
                 processed_loras = json.load(f)
-                if not isinstance(processed_loras, dict) or "loras" not in processed_loras:
-                    processed_loras = {"loras": []}
+                if not isinstance(processed_loras, dict) or not processed_loras.get('version') or processed_loras.get('version') < PROCESSED_LORAS_VERSION:
+                    logger.info(f"Outdated or missing version, marking all LoRAs for reprocessing (current version: {PROCESSED_LORAS_VERSION})")
+                    # Preserve favorites but clear loras list
+                    favorites = processed_loras.get('favorites', []) if isinstance(processed_loras, dict) else []
+                    processed_loras = {
+                        "version": PROCESSED_LORAS_VERSION,
+                        "loras": [],
+                        "favorites": favorites
+                    }
+                    # Save the updated structure
+                    with io.open(processed_loras_file, "w", encoding="utf-8") as f:
+                        json.dump(processed_loras, f, indent=4, ensure_ascii=False)
+                        
+                    # All current loras need processing
+                    response_data = {
+                        "unprocessed_count": len(current_lora_names),
+                        "new_loras": current_lora_names,
+                        "moved_loras": [],
+                        "duplicate_loras": [],
+                        "missing_loras": []
+                    }
+                    
+                    LoraDataStore.set_data(response_data)
+                    return web.json_response(response_data)
             except json.JSONDecodeError:
-                logger.error("Error reading processed_loras.json. Starting fresh.")
-                processed_loras = {"loras": []}
-    else:
-        processed_loras = {"loras": []}
-        logger.info("No processed_loras.json found. Starting fresh.")
-
-    logger.info(f"Number of previously processed LoRAs: {len(processed_loras['loras'])}")
-
-    # Get the current LoRA files
-    lora_files = await list_loras(request)
+                logger.error("Error reading processed_loras.json")
+                processed_loras = {
+                    "version": PROCESSED_LORAS_VERSION,
+                    "loras": [],
+                    "favorites": []
+                }
 
     unprocessed_count = 0
     new_loras = []
@@ -380,14 +502,14 @@ async def process_loras(request):
         
         if unprocessed_info is None:
             # If not, we need to call get_unprocessed_count
-            print("Unprocessed data not found, calling get_unprocessed_count")
-            unprocessed_response = await get_unprocessed_count(request)
+            logger.info("Unprocessed data not found, calling get_unprocessed_count")
+            unprocessed_response = await get_unprocessed_count(request) # can remove later
             unprocessed_info = LoraDataStore.get_data()
 
         if unprocessed_info is None:
             raise ValueError("Failed to retrieve unprocessed LoRAs data")
 
-        print(f"Unprocessed info in process_loras: {unprocessed_info}")
+        logger.info(f"Unprocessed info in process_loras: {unprocessed_info}")
 
         new_loras = unprocessed_info.get('new_loras', [])
         moved_loras = unprocessed_info.get('moved_loras', [])
@@ -407,12 +529,24 @@ async def process_loras(request):
                     processed_loras = json.load(f)
                     if not isinstance(processed_loras, dict):
                         logger.warning("processed_loras.json is malformed. Expected a dictionary.")
-                        processed_loras = {"loras": []}
+                        processed_loras = {
+                            "version": PROCESSED_LORAS_VERSION,
+                            "loras": [],
+                            "favorites": []
+                        }
                 except json.JSONDecodeError:
                     logger.error("Error decoding processed_loras.json. Starting with empty data.")
-                    processed_loras = {"loras": []}
+                    processed_loras = {
+                        "version": PROCESSED_LORAS_VERSION,
+                        "loras": [],
+                        "favorites": []
+                    }
         else:
-            processed_loras = {"loras": []}
+            processed_loras = {
+                "version": PROCESSED_LORAS_VERSION,
+                "loras": [],
+                "favorites": []
+            }
             logger.info("No processed_loras.json found. Starting with empty data.")
 
         logger.info(f"Found {len(new_loras)} new LoRAs, {len(moved_loras)} moved LoRAs, and {len(missing_loras)} missing LoRAs to process.")
@@ -421,20 +555,31 @@ async def process_loras(request):
 
             # Process both new and moved LoRAs
             loras_to_process = new_loras + moved_loras  # Combine both lists
-
             # Process new LoRAs
             for lora_file in loras_to_process:
-                filename = lora_file #should remove i think
+                filename = lora_file #should remove i think?
                 base_filename = lora_file
                 lora_folder = os.path.join(LORA_DATA_DIR, base_filename)
                 
-                # Check if LoRA is already processed by verifying the existence of 'info.json'
+                # Check if LoRA is already processed and up to date
                 info_json_path = os.path.join(lora_folder, "info.json")
                 if os.path.exists(info_json_path):
-                    skipped_count += 1
-                    logger.info(f"Skipping already processed LoRA: {filename}")
-                    
-                    # Get the file path from LORA_FILE_INFO
+                    needs_reprocess = False
+                    try:
+                        with open(info_json_path, "r", encoding="utf-8") as f:
+                            info_data = json.load(f)
+                        
+                        # Check if info.json version is current
+                        if not info_data.get('info_version') or info_data.get('info_version') < PROCESSED_LORAS_VERSION:
+                            needs_reprocess = True
+                            logger.info(f"Found outdated info.json (version: {info_data.get('info_version', 'none')} -> {PROCESSED_LORAS_VERSION}) for {filename}, reprocessing")
+                        
+                    except Exception as e:
+                        logger.error(f"Error checking info.json version for {filename}: {str(e)}")
+                        logger.info(f"Will reprocess {filename} due to error checking version")
+                        needs_reprocess = True
+
+                    # Handle moved files
                     lora_info = LORA_FILE_INFO.get(base_filename)
                     if lora_info:
                         new_path = lora_info['path']
@@ -447,42 +592,66 @@ async def process_loras(request):
                         
                         # Update processed_loras.json if needed
                         if existing_entry is None:
-                            # Add new entry with filename and path
                             processed_loras["loras"].append({
                                 "filename": base_filename,
                                 "path": new_path
                             })
                             path_updated = True
                         elif existing_entry.get("path") != new_path:
-                            # Update path if it has changed
                             existing_entry["path"] = new_path
                             path_updated = True
 
                         # If the path was updated, also update info.json
                         if path_updated:
                             try:
-                                # Update info.json with new path and subdir
-                                with open(info_json_path, "r+", encoding="utf-8") as f:
+                                # Read current info.json
+                                with open(info_json_path, "r", encoding="utf-8") as f:
                                     info_data = json.load(f)
-                                    if info_data.get("path") != new_path or info_data.get("subdir") != new_subdir:
-                                        info_data["path"] = new_path
-                                        info_data["subdir"] = new_subdir
-                                        f.seek(0)
+                                
+                                needs_update = False
+                                
+                                # Check if we need to update metadata source
+                                if info_data.get("local_metadata"):
+                                    # Check if .civitai.info still exists at new location
+                                    new_civitai_info = f"{os.path.splitext(new_path)[0]}.civitai.info"
+                                    if not os.path.exists(new_civitai_info):
+                                        # External metadata no longer available, switch to internal
+                                        info_data["local_metadata"] = False
+                                        needs_update = True
+                                        needs_reprocess = True  # Force reprocess if we lost local metadata
+                                        logger.info(f"External metadata not found at new location for {filename}, switching to internal")
+                                
+                                # Update path and subdir if needed
+                                if info_data.get("path") != new_path or info_data.get("subdir") != new_subdir:
+                                    info_data["path"] = new_path
+                                    info_data["subdir"] = new_subdir
+                                    needs_update = True
+                                
+                                # Write updates if needed
+                                if needs_update:
+                                    with open(info_json_path, "w", encoding="utf-8") as f:
                                         json.dump(info_data, f, indent=4)
-                                        f.truncate()
-                                        logger.info(f"Updated path and subdir for moved LoRA in info.json: {filename}")
+                                        logger.info(f"Updated info.json for moved LoRA: {filename}")
 
                                 # Update processed_loras.json
-                                with open(processed_loras_file, 'w', encoding="utf-8") as f:
-                                    json.dump(processed_loras, f, indent=4, ensure_ascii=False)
-                                logger.debug(f"Updated processed_loras.json for moved LoRA: {filename}")
+                                existing_data = {
+                                    "version": PROCESSED_LORAS_VERSION,
+                                    "loras": [],
+                                    "favorites": []
+                                }
+                                if os.path.exists(processed_loras_file):
+                                    with open(processed_loras_file, "r", encoding="utf-8") as f:
+                                        existing_data = json.load(f)
                                 
-                                # Since we handled the move here, remove it from moved_loras if present
+                                existing_data["loras"] = processed_loras["loras"]
+                                
+                                with open(processed_loras_file, 'w', encoding="utf-8") as f:
+                                    json.dump(existing_data, f, indent=4, ensure_ascii=False)
+                                
+                                # Handle move completion
                                 if filename in moved_loras:
                                     moved_loras.remove(filename)
-                                    processed_count += 1  # Count this as processed since we handled the move
-                                    
-                                    # Send progress update
+                                    processed_count += 1
                                     progress = int(((processed_count + skipped_count) / total_count) * 100)
                                     await PromptServer.instance.send_json("lora_process_progress", {
                                         "progress": progress,
@@ -491,9 +660,20 @@ async def process_loras(request):
                                     })
                                 
                             except Exception as e:
-                                logger.error(f"Failed to update path/subdir information for '{filename}': {e}")
+                                logger.error(f"Error updating info for moved LoRA {filename}: {str(e)}")
+                                needs_reprocess = True  # Force reprocess if we had an error
                     
-                    continue
+                    # Only skip if we don't need to reprocess and haven't moved
+                    if not needs_reprocess:
+                        skipped_count += 1
+                        progress = int(((processed_count + skipped_count) / total_count) * 100)
+                        await PromptServer.instance.send_json("lora_process_progress", {
+                            "progress": progress,
+                            "completed": processed_count + skipped_count,
+                            "total": total_count
+                        })
+                        logger.info(f"Skipping already processed LoRA (current version): {filename}")
+                        continue
                 
                 try:
                     # Process LoRA without creating the folder first
@@ -509,8 +689,18 @@ async def process_loras(request):
                         raise ValueError(f"No entry in LORA_FILE_INFO for {base_filename}. Available keys: {list(LORA_FILE_INFO.keys())[:5]}")
                     
                     file_path = lora_info['path']
-                    file_hash = await hash_file(file_path)
-                    version_info = await fetch_version_info(session, file_hash)
+                    has_local_metadata = False  # Initialize
+
+                    # Check for local metadata first
+                    version_info = await check_local_civitai_info(file_path)
+                    if version_info:
+                        has_local_metadata = True  # Set flag if we found local metadata
+                        logger.info("Got version info from local metadata")
+                    else:
+                        # If no local metadata, proceed with CivitAI API calls
+                        file_hash = await hash_file(file_path)
+                        version_info = await fetch_version_info(session, file_hash)
+                        logger.info("Got version info from CivitAI")
 
                     # Calculate subdir, handling symlink issues and cross-drive paths
                     subdir = get_subdir(file_path)
@@ -528,9 +718,13 @@ async def process_loras(request):
                             "images": [],
                             "nsfw": version_info.get('model', {}).get('nsfw', False),
                             "nsfwLevel": 0,
-                            "description": version_info.get('description'),
+                            "version_desc": version_info.get('description'),
+                            "model_desc": version_info.get('model', {}).get('description'),
+                            "type": version_info.get('model', {}).get('type'),
                             "subdir": subdir,
-                            "path": file_path
+                            "path": file_path,
+                            "local_metadata": has_local_metadata,
+                            "info_version": PROCESSED_LORAS_VERSION
                         }
                         
                         # Fetch model info if available
@@ -568,11 +762,12 @@ async def process_loras(request):
                         
                         # Download the first image as preview
                         if info_to_save['images']:
-                            preview_path = os.path.join(LORA_DATA_DIR, filename, "preview")
-                            os.makedirs(os.path.dirname(preview_path), exist_ok=True)  # Ensure preview directory exists
-                            preview_filename = await download_image(session, info_to_save['images'][0]['url'], preview_path)
-                            if preview_filename:
-                                logger.info(f"Saved preview image as {preview_filename}")
+                            if not has_local_metadata:
+                                preview_path = os.path.join(LORA_DATA_DIR, filename, "preview")
+                                os.makedirs(os.path.dirname(preview_path), exist_ok=True)  # Ensure preview directory exists
+                                preview_filename = await download_image(session, info_to_save['images'][0]['url'], preview_path)
+                                if preview_filename:
+                                    logger.info(f"Saved preview image as {preview_filename}")
                         else:
                             # If no images are available, copy the placeholder as the preview
                             await copy_placeholder_as_preview(base_filename)
@@ -598,9 +793,13 @@ async def process_loras(request):
                             "images": [],
                             "nsfw": False,
                             "nsfwLevel": 0,
-                            "description": "Custom LoRA",  # Default description for custom LoRAs
+                            "version_desc": "Custom Lora",
+                            "model_desc": None,
+                            "type": None,
                             "subdir": subdir,
-                            "path": file_path
+                            "path": file_path,
+                            "local_metadata": False,
+                            "info_version": PROCESSED_LORAS_VERSION  # don't really need this for custom loras
                         }
                         # Copy the placeholder image as preview
                         await copy_placeholder_as_preview(base_filename)
@@ -637,29 +836,39 @@ async def process_loras(request):
                 })
 
             # Handle missing LoRAs
-            for missing_lora in missing_loras:
-                lora_folder = os.path.join(LORA_DATA_DIR, missing_lora)
+            for missing_lora_name in missing_loras:
                 try:
+                    lora_folder = os.path.join(LORA_DATA_DIR, missing_lora_name)
                     # Remove the folder if it exists
                     if os.path.exists(lora_folder):
                         shutil.rmtree(lora_folder)
-                        logger.info(f"Removed folder for missing LoRA: {missing_lora}")
+                        logger.info(f"Removed folder for missing LoRA: {missing_lora_name}")
 
-                    # Remove from processed_loras.json
-                    processed_loras["loras"] = [
-                        lora for lora in processed_loras["loras"] 
-                        if lora.get("filename") != missing_lora
+                    # Read current data to preserve version and favorites
+                    existing_data = {
+                        "version": PROCESSED_LORAS_VERSION,
+                        "loras": [],
+                        "favorites": []
+                    }
+                    if os.path.exists(processed_loras_file):
+                        with open(processed_loras_file, "r", encoding="utf-8") as f:
+                            existing_data = json.load(f)
+                    
+                    # Update loras list
+                    existing_data["loras"] = [
+                        lora for lora in existing_data["loras"] 
+                        if lora.get("filename") != missing_lora_name
                     ]
                     
-                    # Save updated processed_loras.json
-                    with open(processed_loras_file, 'w', encoding="utf-8") as f:
-                        json.dump(processed_loras, f, indent=4, ensure_ascii=False)
-                    logger.info(f"Removed {missing_lora} from processed_loras.json")
+                    # Save updated data
+                    with open(processed_loras_file, "w", encoding="utf-8") as f:
+                        json.dump(existing_data, f, indent=4, ensure_ascii=False)
                     
+                    logger.info(f"Removed {missing_lora_name} from processed_loras.json")
                     processed_count += 1
                     
                 except Exception as e:
-                    logger.error(f"Error handling missing LoRA {missing_lora}: {str(e)}")
+                    logger.error(f"Error handling missing LoRA {missing_lora_name}: {str(e)}")
                     skipped_count += 1
 
                 # Send progress update
@@ -763,7 +972,6 @@ async def get_lora_data(request):
     })
 
 
-
 @PromptServer.instance.routes.post("/lora_sidebar/toggle_favorite")
 async def toggle_favorite(request):
     data = await request.json()
@@ -825,14 +1033,21 @@ async def refresh_lora(request):
                     "message": f"LoRA with version ID {version_id} not found"
                 }, status=404)
 
-            # Fetch updated version info
-            version_info = await fetch_version_info_by_id(session, version_id)
-            if not version_info:
-                logger.error("Failed to fetch updated version info.")
-                return web.json_response({
-                    "status": "error",
-                    "message": "Failed to fetch updated version info"
-                }, status=400)
+            # Check if this LoRA uses local metadata
+            if existing_info.get("local_metadata"):
+                version_info = await check_local_civitai_info(existing_info["path"])
+                if not version_info:
+                    return web.json_response({
+                        "status": "error",
+                        "message": "Local metadata file no longer exists"
+                    }, status=400)
+            else:
+                version_info = await fetch_version_info_by_id(session, version_id)
+                if not version_info:
+                    return web.json_response({
+                        "status": "error",
+                        "message": "Failed to fetch updated version info"
+                    }, status=400)
 
             # Initialize updates dictionary
             updates = {}
@@ -903,9 +1118,21 @@ async def refresh_lora(request):
                                     lora['path'] = new_path
                                     break
                             
-                            # Save updated processed_loras
+                            # Read existing data to preserve favorites
+                            existing_data = {
+                                "version": PROCESSED_LORAS_VERSION,
+                                "loras": [],
+                                "favorites": []
+                            }
+                            with open(processed_loras_file, "r", encoding="utf-8") as f:
+                                existing_data = json.load(f)
+                            
+                            # Update only the loras section
+                            existing_data["loras"] = processed_loras["loras"]
+                            
+                            # Write back complete data
                             with open(processed_loras_file, 'w', encoding="utf-8") as f:
-                                json.dump(processed_loras, f, indent=4, ensure_ascii=False)
+                                json.dump(existing_data, f, indent=4, ensure_ascii=False)
 
                 # Only update the preview image if there's a new first image
                 if 'images' in updates and updates['images']:
