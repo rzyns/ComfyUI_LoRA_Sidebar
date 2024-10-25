@@ -6,11 +6,11 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
 ## Updates
-- Now supports using existing data and images that follow the civitai.info format. This will reduce duplication and also greatly speed up processing of LoRAs that already have this information locally.
-- Fixed a bug with the way subdirs were calculated, now drag and drop should be much more reliable!
+- Now supports using existing data and images that follow the civitai.info format, this reduces duplication and also greatly speed up processing of LoRAs that have it
+- Fixed a bug with the way subdirs were calculated, now drag and drop should be much more reliable
 - Added detection for old data files and reprocessing logic, I won't change this unless I have to, but being able to check it is important (cause I changed it this time 😛)
 - Overhaul of stored data to lay groundwork for future updates
-- Can now search for Lycoris in the search box to quickly find all your lycos! 🥳
+- Can now search for "lycoris" in the search box to quickly find all your lycos 🥳
 
 ## Features
 - Sidebar that automatically generates a visual library of all your LoRA models
