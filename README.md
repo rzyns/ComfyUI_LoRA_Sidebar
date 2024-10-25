@@ -28,7 +28,7 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 
 ## Installation
 ### Registry / Manager
-- Coming Soon
+- Available in Manager, install and go!
 ### Manual
 - `git clone` this repo into your ComfyUI custom nodes folder
   - There are no python dependencies for this node since it's front end only, you can also just download and extract the node there and I won't tell.
