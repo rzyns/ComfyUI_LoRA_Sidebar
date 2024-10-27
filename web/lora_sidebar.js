@@ -894,7 +894,7 @@ class LoraSidebar {
         let lorasContainer = categoryContainer.querySelector('.lora-items-container');
         if (!lorasContainer) {
             lorasContainer = $el("div.lora-items-container");
-            
+
             // fav check
             const isFavorites = categoryName === "Favorites";
             let isExpanded;
@@ -1909,7 +1909,7 @@ class LoraSidebar {
     
         const confirmPopup = $el("div.confirm-delete-popup", [
             $el("p", { 
-                textContent: "Are you sure you want to delete this LoRA? This won't remove the LoRA from your hard drive, but you can remove it manually." 
+                textContent: "Are you sure you want to delete the sidebar metadata for this LoRA? This won't remove the LoRA from your hard drive, but you can remove it manually." 
             }),
             $el("p", { 
                 className: "file-location-label",
@@ -2146,7 +2146,7 @@ app.registerExtension({
         app.ui.settings.addSetting({
             id: "LoRA Sidebar.General.sortModels",
             name: "Sort LoRAs By",
-            tooltip : 'Subdir uses your directory structure, Tags use model tags pulled from CivitAI',
+            tooltip : 'Subdir uses your directory structure, Tags use model tags, either Custom or from CivitAI',
             type: 'combo',
             options: ['None', 'Subdir', 'Tags'],
             defaultValue: 'None',
@@ -2160,7 +2160,7 @@ app.registerExtension({
         app.ui.settings.addSetting({
             id: "LoRA Sidebar.General.tagSource",
             name: "Tags to Use",
-            tooltip : 'CivitAI uses the main site categories like Character, Clothing, Poses, etc.',
+            tooltip : 'Custom will use tags frm the setting above. CivitAI uses the main site categories like Character, Clothing, Poses, etc.',
             type: 'combo',
             options: ['CivitAI', 'Custom'],
             defaultValue: 'CivitAI',
@@ -2174,7 +2174,7 @@ app.registerExtension({
         app.ui.settings.addSetting({
             id: "LoRA Sidebar.General.customTags",
             name: "Custom Category Tags",
-            tooltip : 'Comma seperated list of tags, each Lora will only be assigned to 1 category',
+            tooltip : 'Only used when sort is set to Tags and Tags is set to Custom. A comma seperated list of tags used to create categories, each Lora will only be assigned one category',
             type: 'text',
             defaultValue: 'character, style, concept, clothing, poses, background',
             onChange: (newVal, oldVal) => {
