@@ -12,7 +12,8 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 - Can now replace the default LoRA thumbail via the LoRA Info popup
 - Enhanced LoRA Info popup image handling, added hi-rez pop out
 - Added Favorites category override to keep it expanded even if you have categories minimized (Nice QoL buff for those with large datasets)
-- Fixed some bugs
+- Now properly detects symlink directories in default and custom lora paths, why do you people do this to me (I'm so over symlinks 😝)
+- Fixed some bugs / text
 #### 10/25/24
 - Now supports using existing data and images that follow the civitai.info format, this reduces duplication and also greatly speeds up processing of LoRAs that have it
 - Fixed a bug with the way subdirs were calculated, now drag and drop should be much more reliable
