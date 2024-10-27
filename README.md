@@ -7,7 +7,7 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 
 ## Updates
 #### 10/27/24
-- More external data changes, expanded support to both Stability Matrix data files as well as rgthree metadata. Reduced external calls on processing even more so should be even faster, loading additional data on demand in background. I don't plan to add anymore metadata support at this time, so this should be the last major change here
+- More external data changes, expanded support to both Stability Matrix data files as well as rgthree metadata. Reduced external calls on processing even more so should be even faster, loading additional data on demand in background. I don't plan to add anymore metadata support at this time, so this should be the last major data support change for a while
 - Custom images now can be easily added to any LoRA Info window by just placing the images in the LoRA's base directory (where the preview.jpg and info.json live) - this also makes setting them as the thumbnail super easy
 - Can now replace the default LoRA thumbail via the LoRA Info popup
 - Enhanced LoRA Info popup image handling, added hi-rez pop out
