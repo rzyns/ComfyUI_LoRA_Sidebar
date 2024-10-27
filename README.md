@@ -6,14 +6,14 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
 ## Updates
-10/27/24
+### 10/27/24
 - More external data changes, expanded support to both Stability Matrix data files as well as rgthree metadata. Reduced external calls on processing even more so should be even faster, loading additional data on demand in background. I don't plan to add anymore metadata support at this time, so this should be the last major change here
 - Custom images now can be easily added to any LoRA Info window by just placing the images in the LoRA's base directory (where the preview.jpg and info.json live) - this also makes setting them as the thumbnail super easy
 - Can now replace the default LoRA thumbail via the LoRA Info popup
 - Enhanced LoRA Info popup image handling, added hi-rez pop out
 - Added Favorites category override to keep it expanded even if you have categories minimized (Nice QoL buff for those with large datasets)
 - Fixed some bugs
-10/25/24
+### 10/25/24
 - Now supports using existing data and images that follow the civitai.info format, this reduces duplication and also greatly speeds up processing of LoRAs that have it
 - Fixed a bug with the way subdirs were calculated, now drag and drop should be much more reliable
 - Added detection for old data files and reprocessing logic, I won't change this unless I have to, but being able to check it is important (cause I changed it this time 😛)
