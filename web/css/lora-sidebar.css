@@ -185,6 +185,11 @@
     color: #fff;
     font-size: 20px;
     cursor: pointer;
+    z-index: 2;
+}
+
+.image-popup .close-button:hover {
+    background: rgba(88, 88, 88, 0.8);
 }
 
 .model-info-popup .popup-content {
@@ -223,6 +228,124 @@
 
 .model-info-popup .name-container {
     margin-bottom: 10px;
+}
+
+.model-info-popup .media-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 5px;
+    z-index: 3;
+}
+
+.model-info-popup .media-control-button {
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.model-info-popup .media-control-button:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: translateY(-1px);
+}
+
+.model-info-popup .media-control-button i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.image-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    background: rgba(33, 33, 33, 0.88);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-popup .image-container {
+    position: relative;
+    max-width: 95vw;
+    max-height: 95vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-popup img {
+    max-width: 95vw;
+    max-height: 95vh;
+    object-fit: contain;
+}
+
+.image-popup .popup-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+}
+
+.image-popup .popup-control-button {
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.image-popup .popup-control-button:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.image-popup .nav-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    transition: background-color 0.2s;
+}
+
+.image-popup .nav-button:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.image-popup .nav-button.prev {
+    left: 20px;
+}
+
+.image-popup .nav-button.next {
+    right: 20px;
 }
 
 .model-info-popup .delete-button {

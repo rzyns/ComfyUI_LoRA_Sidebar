@@ -24,13 +24,14 @@ class LoraSidebar {
         this.state = this.isNewSession ? this.getDefaultState() : this.loadState();
         this.isFirstOpen = true; //session hack
         this.defaultCatState = app.ui.settings.getSettingValue("LoRA Sidebar.General.catState", "Expanded") === "Expanded";
+        this.favState = app.ui.settings.getSettingValue("LoRA Sidebar.General.favState", true);
         this.loraData = [];
         this.filteredData = [];
         this.minSize = 100;
         this.maxSize = 400;
         this.loadingDelay = 800; // continuous loading delay in ms
         this.initialIndex = 500;
-        this.batchSize = app.ui.settings.getSettingValue("LoRA Sidebar.General.batchSize", 500);;
+        this.batchSize = app.ui.settings.getSettingValue("LoRA Sidebar.General.batchSize", 500);
         this.nextStartIndex = this.initialIndex + 1;
         this.savedElementSize = app.ui.settings.getSettingValue("LoRA Sidebar.General.thumbnailSize", 125);
         this.elementSize = this.state.elementSize || this.savedElementSize;
@@ -868,9 +869,17 @@ class LoraSidebar {
     
         let header = categoryContainer.querySelector('.category-header');
         if (!header) {
-            //const isExpanded = this.state.categoryStates[categoryName] !== this.defaultCatState; // Default to expanded if not set
-            const isExpanded = this.state.categoryStates[categoryName] !== undefined ? this.state.categoryStates[categoryName] : this.defaultCatState;
-            debug.log('Defaultcatstate', this.defaultCatState);
+            // For Favorites category, use favState if enabled, otherwise use normal state logic
+            const isFavorites = categoryName === "Favorites";
+            let isExpanded;
+            
+            if (isFavorites && this.favState) {
+                isExpanded = true; // Always expand Favorites if favState is true
+            } else {
+                isExpanded = this.state.categoryStates[categoryName] !== undefined 
+                    ? this.state.categoryStates[categoryName] 
+                    : this.defaultCatState;
+            }
             
             header = $el("div.category-header", {}, [
                 $el("h3.category-title", {}, [categoryName]),
@@ -885,7 +894,19 @@ class LoraSidebar {
         let lorasContainer = categoryContainer.querySelector('.lora-items-container');
         if (!lorasContainer) {
             lorasContainer = $el("div.lora-items-container");
-            const isExpanded = this.state.categoryStates[categoryName] !== undefined ? this.state.categoryStates[categoryName] : this.defaultCatState;
+            
+            // fav check
+            const isFavorites = categoryName === "Favorites";
+            let isExpanded;
+            
+            if (isFavorites && this.favState) {
+                isExpanded = true;
+            } else {
+                isExpanded = this.state.categoryStates[categoryName] !== undefined 
+                    ? this.state.categoryStates[categoryName] 
+                    : this.defaultCatState;
+            }
+            
             lorasContainer.style.display = isExpanded ? 'grid' : 'none';
             categoryContainer.appendChild(lorasContainer);
     
@@ -989,9 +1010,11 @@ class LoraSidebar {
         }
     }
 
-    createLoraElement(lora) {
+    createLoraElement(lora, forceRefresh = false) {
         const container = $el("div.lora-item");
-        const previewUrl = `/lora_sidebar/preview/${encodeURIComponent(lora.id)}`;
+        const previewUrl = forceRefresh 
+        ? `/lora_sidebar/preview/${encodeURIComponent(lora.id)}?cb=${Date.now()}`
+        : `/lora_sidebar/preview/${encodeURIComponent(lora.id)}`;
         
         let isVideo = false;
         let previewElement;
@@ -1412,6 +1435,316 @@ class LoraSidebar {
         // Create the content container
         const contentContainer = $el("div.popup-content");
 
+        // Function to update media content
+        const updateMediaContent = (updatedLora) => {
+            // Remove existing media container if it exists
+            const existingMediaContainer = contentContainer.querySelector('.media-container');
+            if (existingMediaContainer) {
+                existingMediaContainer.remove();
+            }
+
+            // Create and append new media container with updated data
+            const mediaItems = updatedLora.images || [];
+            const mediaContainer = $el("div.media-container");
+            contentContainer.appendChild(mediaContainer);
+
+            let currentIndex = 0;
+            let prevButton, nextButton;
+
+            const updateMedia = () => {
+                mediaContainer.innerHTML = "";
+                if (mediaItems.length > 0) {
+                    const item = mediaItems[currentIndex];
+                    const isVideo = item.type === 'video';
+                    
+                    const mediaElement = isVideo ? 
+                        $el("video", {
+                            src: item.url,
+                            controls: true,
+                            loop: true,
+                        }) :
+                        $el("img", {
+                            style: {
+                                opacity: 0,
+                                transition: 'opacity 0.3s ease, transform 0.3s ease',
+                            }
+                        });
+
+                    if (!isVideo) {
+                        mediaElement.onload = () => {
+                            mediaElement.style.opacity = 1;
+                        };
+                        mediaElement.src = item.url;
+                    }
+
+                    // Add media controls container
+                    const mediaControls = $el("div.media-controls", [
+                        // Set as preview button
+                        $el("button.media-control-button", {
+                            innerHTML: '<i class="pi pi-clone"></i>',
+                            title: "Set as preview image",
+                            onclick: async (e) => {
+                                e.stopPropagation();
+                                try {
+                                    const response = await fetch('/lora_sidebar/set_preview', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            id: lora.id,
+                                            url: item.url
+                                        })
+                                    });
+                                    
+                                    if (response.ok) {
+                                        // Create new element with cache buster
+                                        const newLoraElement = this.createLoraElement(lora, true);
+                                        const existingLoraContainer = document.querySelector(`.lora-item img[src*="${encodeURIComponent(lora.id)}"]`)?.closest('.lora-item');
+                                        if (existingLoraContainer) {
+                                            if (existingLoraContainer.style.width) {
+                                                newLoraElement.style.width = existingLoraContainer.style.width;
+                                            }
+                                            existingLoraContainer.replaceWith(newLoraElement);
+                                        }
+                                    }
+                                } catch (error) {
+                                    console.error('Error setting preview:', error);
+                                }
+                            }
+                        }),
+                        // Pop-out button
+                        $el("button.media-control-button", {
+                            innerHTML: '<i class="pi pi-window-maximize"></i>',
+                            title: "View larger",
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                let currentIndex = mediaItems.indexOf(item);
+                        
+                                const createPopupContent = (index) => {
+                                    const fullSizeUrl = mediaItems[index].url.replace(/\/width=\d+\//, '/');
+                                    return [
+                                        // Control buttons container
+                                        $el("div.popup-controls", [
+                                            // Set as preview button
+                                            $el("button.popup-control-button", {
+                                                innerHTML: '<i class="pi pi-clone"></i>',
+                                                title: "Set as preview image",
+                                                onclick: async (e) => {
+                                                    e.stopPropagation();
+                                                    try {
+                                                        const response = await fetch('/lora_sidebar/set_preview', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({
+                                                                id: lora.id,
+                                                                url: mediaItems[currentIndex].url
+                                                            })
+                                                        });
+                                                        
+                                                        if (response.ok) {
+                                                            const newLoraElement = this.createLoraElement(lora, true);
+                                                            const existingLoraContainer = document.querySelector(`.lora-item img[src*="${encodeURIComponent(lora.id)}"]`)?.closest('.lora-item');
+                                                            if (existingLoraContainer) {
+                                                                if (existingLoraContainer.style.width) {
+                                                                    newLoraElement.style.width = existingLoraContainer.style.width;
+                                                                }
+                                                                existingLoraContainer.replaceWith(newLoraElement);
+                                                                this.showToast("success", "LoRA Preview Thumbnail Updated.");
+                                                            }
+                                                        }
+                                                    } catch (error) {
+                                                        console.error('Error setting preview:', error);
+                                                    }
+                                                }
+                                            }),
+                                            // Close button
+                                            $el("button.popup-control-button", {
+                                                innerHTML: '<i class="pi pi-times"></i>',
+                                                title: "Close",
+                                                onclick: (e) => {
+                                                    e.stopPropagation();
+                                                    popup.remove();
+                                                }
+                                            })
+                                        ]),
+                                        // Navigation buttons
+                                        $el("button.nav-button.prev", {
+                                            innerHTML: '<i class="pi pi-chevron-left"></i>',
+                                            onclick: (e) => {
+                                                e.stopPropagation();
+                                                currentIndex = (currentIndex - 1 + mediaItems.length) % mediaItems.length;
+                                                imageContainer.replaceChildren(...createPopupContent(currentIndex));
+                                            },
+                                            style: { display: mediaItems.length > 1 ? 'flex' : 'none' }
+                                        }),
+                                        $el("button.nav-button.next", {
+                                            innerHTML: '<i class="pi pi-chevron-right"></i>',
+                                            onclick: (e) => {
+                                                e.stopPropagation();
+                                                currentIndex = (currentIndex + 1) % mediaItems.length;
+                                                imageContainer.replaceChildren(...createPopupContent(currentIndex));
+                                            },
+                                            style: { display: mediaItems.length > 1 ? 'flex' : 'none' }
+                                        }),
+                                        $el("img", {
+                                            src: fullSizeUrl,
+                                            onclick: (e) => e.stopPropagation()
+                                        })
+                                    ];
+                                };
+
+                                const imageContainer = $el("div.image-container");
+                                const popup = $el("div.image-popup", [imageContainer]);
+                                imageContainer.replaceChildren(...createPopupContent(currentIndex));
+                                
+                                document.body.appendChild(popup);
+
+                                // Close when clicking outside or pressing escape
+                                const closePopup = (e) => {
+                                    if (e.key === 'Escape' || e.target === popup) {
+                                        popup.remove();
+                                        document.removeEventListener('keydown', closePopup);
+                                        document.removeEventListener('click', closePopup);
+                                    }
+                                };
+
+                                // Also close if clicking on the info popup
+                                const infoPopup = document.querySelector('.model-info-popup');
+                                if (infoPopup) {
+                                    infoPopup.addEventListener('click', (e) => {
+                                        if (e.target === infoPopup) {
+                                            popup.remove();
+                                        }
+                                    });
+                                }
+
+                                // Close if info popup is closed
+                                const observer = new MutationObserver((mutations) => {
+                                    if (!document.contains(this.currentPopup)) {
+                                        popup.remove();
+                                        observer.disconnect();
+                                    }
+                                });
+                                observer.observe(document.body, { childList: true, subtree: true });
+
+                                document.addEventListener('keydown', closePopup);
+                                document.addEventListener('click', closePopup);
+                            }
+                        })
+                    ]);
+
+                    mediaContainer.appendChild(mediaElement);
+                    mediaContainer.appendChild(mediaControls);
+                }
+
+                // Re-append carousel buttons
+                if (prevButton && nextButton) {
+                    mediaContainer.appendChild(prevButton);
+                    mediaContainer.appendChild(nextButton);
+                }
+            };
+
+            if (mediaItems.length > 1) {
+                prevButton = $el("button", {
+                    textContent: "←",
+                    onclick: () => {
+                        currentIndex = (currentIndex - 1 + mediaItems.length) % mediaItems.length;
+                        updateMedia();
+                    },
+                    className: "carousel-button prev"
+                });
+
+                nextButton = $el("button", {
+                    textContent: "→",
+                    onclick: () => {
+                        currentIndex = (currentIndex + 1) % mediaItems.length;
+                        updateMedia();
+                    },
+                    className: "carousel-button next"
+                });
+
+                mediaContainer.appendChild(prevButton);
+                mediaContainer.appendChild(nextButton);
+            }
+
+            updateMedia();
+        };
+
+        const updateTrainedWords = (updatedLora) => {
+            const existingWordsContainer = contentContainer.querySelector('.trained-words');
+            if (existingWordsContainer && updatedLora.trained_words?.length > 0) {
+                existingWordsContainer.replaceWith($el("div.trained-words", [
+                    $el("h4", { textContent: "Trained Words:" }),
+                    $el("div.word-pills", updatedLora.trained_words.map(word => 
+                        $el("span.word-pill", { 
+                            textContent: word,
+                            onclick: () => this.copyToClipboard(word)
+                        })
+                    )),
+                    $el("button.copy-all-button", {
+                        textContent: "Copy All",
+                        onclick: () => this.copyToClipboard(updatedLora.trained_words.join(", "))
+                    })
+                ]));
+            }
+        };
+        
+        const updateTags = (updatedLora) => {
+            const existingTagsContainer = contentContainer.querySelector('.tags');
+            if (existingTagsContainer && updatedLora.tags?.length > 0) {
+                existingTagsContainer.replaceWith($el("div.tags", [
+                    $el("h4", { textContent: "Tags:" }),
+                    $el("div.word-pills", updatedLora.tags.map(tag => 
+                        $el("span.word-pill", { 
+                            textContent: tag,
+                            onclick: () => this.copyToClipboard(tag)
+                        })
+                    ))
+                ]));
+            }
+        };
+
+        const fetchImagesIfNeeded = async () => {
+            console.log("Checking for images:", {
+                hasImages: !!lora.images,
+                imageCount: lora.images?.length,
+                baseModel: lora.baseModel,
+                versionId: lora.versionId
+            });
+        
+            if (!lora.images || lora.images.length === 0) {
+                // Only fetch for non-custom LoRAs that have a versionId
+                if (lora.baseModel !== 'custom' && lora.versionId) {
+                    console.log("Fetching images for lora:", lora.name);
+                    try {
+                        const response = await fetch(`/lora_sidebar/refresh/${lora.versionId}`, {
+                            method: 'POST'
+                        });
+                        
+                        console.log("Response received:", response.status);
+                        if (response.ok) {
+                            const result = await response.json();
+                            console.log("Got refresh result:", result);
+                            if (result.status === 'success' && result.data) {
+                                // Update the lora object with new data
+                                Object.assign(lora, result.data);
+                                // Update the media content
+                                updateMediaContent(lora);
+                                updateTrainedWords(lora);
+                                updateTags(lora);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error fetching LoRA images:', error);
+                    }
+                } else {
+                    console.log("Skipping image fetch:", {
+                        isCustom: lora.baseModel === 'custom',
+                        hasVersionId: !!lora.versionId
+                    });
+                }
+            }
+        };
+
         // Add CivitAI link if modelId is available
         if (lora.modelId) {
             const civitAiLink = $el("a", {
@@ -1464,107 +1797,48 @@ class LoraSidebar {
         }
 
         // Add trained words
-        if (lora.trained_words && lora.trained_words.length > 0) {
-            const trainedWordsElement = $el("div.trained-words", [
-                $el("h4", { textContent: "Trained Words:" }),
-                $el("div.word-pills", lora.trained_words.map(word => 
-                    $el("span.word-pill", { 
-                        textContent: word,
-                        onclick: () => this.copyToClipboard(word)
-                    })
-                )),
+        const trainedWordsElement = $el("div.trained-words", [
+            $el("h4", { textContent: "Trained Words:" }),
+            $el("div.word-pills", 
+                lora.trained_words && lora.trained_words.length > 0 
+                    ? lora.trained_words.map(word => 
+                        $el("span.word-pill", { 
+                            textContent: word,
+                            onclick: () => this.copyToClipboard(word)
+                        })
+                    )
+                    : $el("span", { textContent: "None", className: "no-tags" })
+            ),
+            ...(lora.trained_words && lora.trained_words.length > 0 ? [
                 $el("button.copy-all-button", {
                     textContent: "Copy All",
                     onclick: () => this.copyToClipboard(lora.trained_words.join(", "))
                 })
-            ]);
-            contentContainer.appendChild(trainedWordsElement);
-        }
+            ] : [])
+        ]);
+        contentContainer.appendChild(trainedWordsElement);
 
         // Add tags
-        if (lora.tags && lora.tags.length > 0) {
-            const tagsElement = $el("div.tags", [
-                $el("h4", { textContent: "Tags:" }),
-                $el("div.word-pills", lora.tags.map(tag => 
-                    $el("span.word-pill", { 
-                        textContent: tag,
-                        onclick: () => this.copyToClipboard(tag)
-                    })
-                ))
-            ]);
-            contentContainer.appendChild(tagsElement);
-        }
+        const tagsElement = $el("div.tags", [
+            $el("h4", { textContent: "Tags:" }),
+            $el("div.word-pills", 
+                lora.tags && lora.tags.length > 0 
+                    ? lora.tags.map(tag => 
+                        $el("span.word-pill", { 
+                            textContent: tag,
+                            onclick: () => this.copyToClipboard(tag)
+                        })
+                    )
+                    : $el("span", { textContent: "None", className: "no-tags" })
+            )
+        ]);
+        contentContainer.appendChild(tagsElement);
 
-        // Media carousel
-        let currentIndex = 0;
-        const mediaItems = lora.images || [];
-
-
-        const mediaContainer = $el("div.media-container");
-        contentContainer.appendChild(mediaContainer);
-    
-        let prevButton, nextButton;
-    
-        const updateMedia = () => {
-            mediaContainer.innerHTML = "";
-            if (mediaItems.length > 0) {
-                const item = mediaItems[currentIndex];
-                const isVideo = item.type === 'video';
-                
-                const mediaElement = isVideo ? 
-                    $el("video", {
-                        src: item.url,
-                        controls: true,
-                        loop: true,
-                    }) :
-                    $el("img", {
-                    style: {
-                        opacity: 0,
-                        transition: 'opacity 0.3s ease, transform 0.3s ease',
-                    }
-                    });
-    
-                if (!isVideo) {
-                    mediaElement.onload = () => {
-                        mediaElement.style.opacity = 1;
-                    };
-                    mediaElement.src = item.url;
-                }
-    
-                mediaContainer.appendChild(mediaElement);
-            }
-    
-            // Re-append buttons after updating media
-            if (prevButton && nextButton) {
-                mediaContainer.appendChild(prevButton);
-                mediaContainer.appendChild(nextButton);
-            }
-        };
-    
-        if (mediaItems.length > 1) {
-            prevButton = $el("button", {
-                textContent: "←",
-                onclick: () => {
-                    currentIndex = (currentIndex - 1 + mediaItems.length) % mediaItems.length;
-                    updateMedia();
-                },
-                className: "carousel-button prev"
-            });
-    
-            nextButton = $el("button", {
-                textContent: "→",
-                onclick: () => {
-                    currentIndex = (currentIndex + 1) % mediaItems.length;
-                    updateMedia();
-                },
-                className: "carousel-button next"
-            });
-    
-            mediaContainer.appendChild(prevButton);
-            mediaContainer.appendChild(nextButton);
-        }
-    
-        updateMedia();
+        // Update initial media content
+        updateMediaContent(lora);
+        
+        // Fetch images if needed
+        fetchImagesIfNeeded();
 
         // Append the close button and content container to popup
         popup.appendChild(closeButton);
@@ -1772,6 +2046,9 @@ class LoraSidebar {
         this.batchSize = newVal;
     }
 
+    updateFavState(newVal) {
+        this.favState = newVal;
+    }
 
     ////////
 
@@ -1849,6 +2126,19 @@ app.registerExtension({
             onChange: (newVal, oldVal) => {
                 if (app.loraSidebar && oldVal !== undefined) {
                     app.loraSidebar.updateCategoryState(newVal);
+                }
+            }
+        });
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.General.favState",
+            name: `Expand Favorites`,
+            tooltip : 'Default Favorites to expanded regardless of other settings',
+            type: "boolean",
+            defaultValue: true,
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.updateFavState(newVal);
                 }
             }
         });

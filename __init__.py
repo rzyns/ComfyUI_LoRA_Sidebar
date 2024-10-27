@@ -13,6 +13,7 @@ import asyncio
 import time
 from collections import Counter
 import logging
+from typing import Optional, Dict, Any
 
 
 # Set up logging
@@ -109,42 +110,117 @@ async def hash_file(filepath):
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
-async def check_local_civitai_info(file_path):
-    info_path = f"{os.path.splitext(file_path)[0]}.civitai.info"
+async def check_local_info(file_path):
+    # Try CivitAI first
+    civitai_info_path = f"{os.path.splitext(file_path)[0]}.civitai.info"
+    logger.info(f"Checking for CivitAI metadata at: {civitai_info_path}")
+   
+    if os.path.exists(civitai_info_path):
+        try:
+            logger.info(f"Found CivitAI metadata file, attempting to read: {civitai_info_path}")
+            with open(civitai_info_path, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+               
+            return {
+                "modelId": metadata.get("modelId"),
+                "id": metadata.get("id"),  # Version ID from the info
+                "name": metadata.get("name"), # Version name
+                "model": {
+                    "name": metadata.get("model", {}).get("name"),
+                    "nsfw": metadata.get("model", {}).get("nsfw", False),
+                    "tags": metadata.get("model", {}).get("tags", []),
+                    "description": metadata.get("model", {}).get("description"),  # Model description
+                    "type": metadata.get("model", {}).get("type")
+                },
+                "trainedWords": metadata.get("trainedWords", []),
+                "baseModel": metadata.get("baseModel"),
+                "description": metadata.get("description"),  # Version description
+                "images": metadata.get("images", []),
+                "local_metadata": True,  # Add flag
+                "has_local_images": True
+            }
+        except Exception as e:
+            logger.error(f"Error reading civitai.info for {file_path}: {str(e)}")
+    
+    # Try SMatrix second
+    matrix_info_path = f"{os.path.splitext(file_path)[0]}.cm-info.json"
+    logger.info(f"Checking for SMatrix metadata at: {matrix_info_path}")
+    
+    if os.path.exists(matrix_info_path):
+        try:
+            logger.info(f"Found SMatrix metadata file, attempting to read: {matrix_info_path}")
+            with open(matrix_info_path, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+                
+            return {
+                "modelId": metadata.get("ModelId"),
+                "id": metadata.get("VersionId"),  # Version ID
+                "name": metadata.get("VersionName"),
+                "model": {
+                    "name": metadata.get("ModelName"),
+                    "nsfw": metadata.get("Nsfw", False),
+                    "tags": metadata.get("Tags", []),
+                    "description": metadata.get("ModelDescription"),
+                    "type": metadata.get("ModelType")
+                },
+                "trainedWords": metadata.get("TrainedWords", []),
+                "baseModel": metadata.get("BaseModel"),
+                "description": metadata.get("VersionDescription"),
+                "images": [],
+                "local_metadata": True,
+                "has_local_images": True
+            }
+        except Exception as e:
+            logger.error(f"Error reading cm-info.json for {file_path}: {str(e)}")
+    
+    # Try rg3  third...get it?
+    rg3_info_path = f"{os.path.splitext(file_path)[0]}.safetensors.rgthree-info.json"
+    logger.info(f"Checking for RG3 metadata at: {rg3_info_path}")
 
-    logger.info(f"Checking for local metadata at: {info_path}")
-    
-    if not os.path.exists(info_path):
-        logger.info(f"No local metadata found at: {info_path}")
-        return False
-        
-    try:
-        logger.info(f"Found local metadata file, attempting to read: {info_path}")
-        with open(info_path, 'r', encoding='utf-8') as f:
-            metadata = json.load(f)
+    if os.path.exists(rg3_info_path):
+        try:
+            logger.info(f"Found RG3 metadata file, attempting to read: {rg3_info_path}")
+            with open(rg3_info_path, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+                
+            civitai = metadata.get('raw', {}).get('civitai', {})
+                
+            return_data = {
+                "modelId": civitai.get("modelId"),
+                "id": civitai.get("id"),
+                "name": civitai.get("name"),  # version name
+                "model": {
+                    "name": civitai.get("model", {}).get("name"),
+                    "nsfw": civitai.get("model", {}).get("nsfw", False),
+                    "description": None,
+                    "type": civitai.get("model", {}).get("type"),
+                },
+                "trainedWords": civitai.get("trainedWords", []),
+                "baseModel": civitai.get("baseModel"),
+                "description": civitai.get("description"),  # version desc
+                "images": [
+                    {
+                        "url": img.get("url"),
+                        "type": img.get("type", "image"),
+                        "hasMeta": img.get("hasMeta", False),
+                        "nsfwLevel": img.get("nsfwLevel", 0)
+                    }
+                    for img in civitai.get("images", [])
+                ],
+                "local_metadata": True,
+                "has_local_images": False
+            }
             
-        # Convert the CivitAI model info format to match version endpoint format
-        return {
-            "modelId": metadata.get("modelId"),
-            "id": metadata.get("id"),  # Version ID from the info
-            "name": metadata.get("name"), # Version name
-            "model": {
-                "name": metadata.get("model", {}).get("name"),
-                "nsfw": metadata.get("model", {}).get("nsfw", False),
-                "tags": metadata.get("model", {}).get("tags", []),
-                "description": metadata.get("model", {}).get("description"),  # Model description
-                "type": metadata.get("model", {}).get("type")
-            },
-            "trainedWords": metadata.get("trainedWords", []),
-            "baseModel": metadata.get("baseModel"),
-            "description": metadata.get("description"),  # Version description
-            "images": metadata.get("images", []),
-            "local_metadata": True  # Add our flag
-        }
+            logger.info(f"Successfully parsed RG3 metadata for {file_path}")
+            logger.info(f"RG3 metadata {return_data}")
+            return return_data
+        
+        except Exception as e:
+            logger.error(f"Error reading safetensors.rgthree-info.json for {file_path}: {str(e)}")
     
-    except Exception as e:
-        logger.error(f"Error reading civitai.info for {file_path}: {str(e)}")
-        return False
+    # No valid metadata found in any format
+    logger.info(f"No valid metadata found for: {file_path}")
+    return False
 
 async def fetch_model_info(session, model_id):
     url = f"https://civitai.com/api/v1/models/{model_id}"
@@ -247,6 +323,50 @@ def get_subdir(file_path):
     except Exception as e:
         logging.error(f"Error in get_subdir: {str(e)}")
         return ""
+    
+def find_custom_images(base_path, base_filename):
+    """Find custom images for a LoRA in both internal and external locations"""
+    custom_images = []
+    
+    # Get the directory containing the base file
+    base_dir = os.path.dirname(base_path)
+    
+    # Get base name without extension for matching
+    name_without_ext = os.path.splitext(base_filename)[0]
+    
+    # Common image extensions to look for
+    image_extensions = ('.jpg', '.jpeg', '.png', '.webp')
+    
+    # For internal loras, look in the lora data directory
+    lora_data_path = os.path.join(LORA_DATA_DIR, name_without_ext)
+    if os.path.exists(lora_data_path):
+        for file in os.listdir(lora_data_path):
+            if file.lower().endswith(image_extensions) and not file.startswith('preview'):
+                custom_images.append({
+                    "url": f"/lora_sidebar/custom_image/{name_without_ext}/{file}",
+                    "type": "image",
+                    "nsfwLevel": 0,
+                    "hasMeta": True,
+                    "custom": True,
+                    "name": file
+                })
+    
+    # For external data, look for additional preview files
+    if os.path.exists(f"{os.path.splitext(base_path)[0]}.civitai.info"):
+        for file in os.listdir(base_dir):
+            if file.startswith(name_without_ext) and file.lower().endswith(image_extensions):
+                # Skip the main preview file
+                if not file.endswith('.preview' + os.path.splitext(file)[1]):
+                    custom_images.append({
+                        "url": f"/lora_sidebar/custom_image/{name_without_ext}/{file}",
+                        "type": "image",
+                        "nsfwLevel": 0,
+                        "hasMeta": True,
+                        "custom": True,
+                        "name": file
+                    })
+    
+    return custom_images
 
 @PromptServer.instance.routes.get("/lora_sidebar/loras/list")
 async def list_loras(request):
@@ -289,7 +409,7 @@ async def list_loras(request):
 
 @PromptServer.instance.routes.get("/lora_sidebar/preview/{lora_name}")
 async def get_lora_preview(request):
-    """Load preview media with proper MIME type handling."""
+    # Load preview media with proper MIME type handling.
     lora_name = request.match_info['lora_name']
     
     def get_content_type(filepath):
@@ -303,21 +423,6 @@ async def get_lora_preview(request):
         }
         return content_types.get(ext, 'application/octet-stream')
     
-    # First check if this LoRA uses local metadata
-    info_path = os.path.join(LORA_DATA_DIR, lora_name, "info.json")
-    if os.path.exists(info_path):
-        with open(info_path, "r", encoding="utf-8") as f:
-            info = json.load(f)
-            if info.get("local_metadata") and info.get("path"):
-                base_path = os.path.splitext(info["path"])[0]
-                for ext in ['.preview.png', '.preview.jpg', '.preview.mp4', '.preview.webm']:
-                    preview_path = f"{base_path}{ext}"
-                    if os.path.exists(preview_path):
-                        return web.FileResponse(
-                            preview_path,
-                            headers={"Content-Type": get_content_type(preview_path)}
-                        )
-    
     # Look in managed folder
     lora_folder = os.path.join(LORA_DATA_DIR, lora_name)
     for ext in ['.jpg', '.png', '.jpeg', '.mp4', '.webm']:
@@ -328,6 +433,22 @@ async def get_lora_preview(request):
                 headers={"Content-Type": get_content_type(preview_path)}
             )
     
+    # Check if this LoRA uses local image data
+    info_path = os.path.join(LORA_DATA_DIR, lora_name, "info.json")
+    if os.path.exists(info_path):
+        with open(info_path, "r", encoding="utf-8") as f:
+            info = json.load(f)
+            logger.info(f"Loading info for {lora_name}: local_metadata={info.get('local_metadata')}, path={info.get('path')}")
+            if info.get("local_metadata") and info.get("path"):
+                base_path = os.path.splitext(info["path"])[0]
+                for ext in ['.preview.png', '.preview.jpg', '.preview.jpeg', '.preview.mp4', '.preview.webm']:
+                    preview_path = f"{base_path}{ext}"
+                    if os.path.exists(preview_path):
+                        return web.FileResponse(
+                            preview_path,
+                            headers={"Content-Type": get_content_type(preview_path)}
+                        )
+        
     # Fallback to placeholder
     placeholder_path = os.path.join(LORA_DATA_DIR, "placeholder.jpeg")
     if os.path.exists(placeholder_path):
@@ -335,6 +456,46 @@ async def get_lora_preview(request):
             placeholder_path,
             headers={"Content-Type": "image/jpeg"}
         )
+    
+    return web.Response(status=404)
+
+@PromptServer.instance.routes.get("/lora_sidebar/custom_image/{lora_name}/{image_name}")
+async def get_lora_custom_image(request):
+    # Load custom images for a LoRA
+    lora_name = request.match_info['lora_name']
+    image_name = request.match_info['image_name']
+    
+    def get_content_type(filepath):
+        ext = os.path.splitext(filepath)[1].lower()
+        content_types = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.webp': 'image/webp'
+        }
+        return content_types.get(ext, 'application/octet-stream')
+    
+    # Check internal lora data directory first
+    custom_path = os.path.join(LORA_DATA_DIR, lora_name, image_name)
+    if os.path.exists(custom_path) and os.path.isfile(custom_path):
+        return web.FileResponse(
+            custom_path,
+            headers={"Content-Type": get_content_type(custom_path)}
+        )
+    
+    # Then check external files location
+    info_path = os.path.join(LORA_DATA_DIR, lora_name, "info.json")
+    if os.path.exists(info_path):
+        with open(info_path, "r", encoding="utf-8") as f:
+            info = json.load(f)
+            if info.get("local_metadata") and info.get("path"):
+                base_dir = os.path.dirname(info["path"])
+                external_path = os.path.join(base_dir, image_name)
+                if os.path.exists(external_path) and os.path.isfile(external_path):
+                    return web.FileResponse(
+                        external_path,
+                        headers={"Content-Type": get_content_type(external_path)}
+                    )
     
     return web.Response(status=404)
 
@@ -350,6 +511,12 @@ async def get_unprocessed_count(request):
     logger.info("Starting fresh: Scanning for unprocessed LoRAs")
 
     processed_loras_file = os.path.join(LORA_DATA_DIR, "processed_loras.json")
+    # Initialize processed_loras with default structure
+    processed_loras = {
+        "version": PROCESSED_LORAS_VERSION,
+        "loras": [],
+        "favorites": []
+    }
     
     # Get the current LoRA files first
     lora_files = await list_loras(request)
@@ -359,11 +526,11 @@ async def get_unprocessed_count(request):
     if os.path.exists(processed_loras_file):
         with io.open(processed_loras_file, "r", encoding="utf-8") as f:
             try:
-                processed_loras = json.load(f)
-                if not isinstance(processed_loras, dict) or not processed_loras.get('version') or processed_loras.get('version') < PROCESSED_LORAS_VERSION:
+                loaded_data = json.load(f)
+                if not isinstance(loaded_data, dict) or not loaded_data.get('version') or loaded_data.get('version') < PROCESSED_LORAS_VERSION:
                     logger.info(f"Outdated or missing version, marking all LoRAs for reprocessing (current version: {PROCESSED_LORAS_VERSION})")
                     # Preserve favorites but clear loras list
-                    favorites = processed_loras.get('favorites', []) if isinstance(processed_loras, dict) else []
+                    favorites = loaded_data.get('favorites', []) if isinstance(loaded_data, dict) else []
                     processed_loras = {
                         "version": PROCESSED_LORAS_VERSION,
                         "loras": [],
@@ -384,13 +551,10 @@ async def get_unprocessed_count(request):
                     
                     LoraDataStore.set_data(response_data)
                     return web.json_response(response_data)
+                else:
+                    processed_loras = loaded_data
             except json.JSONDecodeError:
                 logger.error("Error reading processed_loras.json")
-                processed_loras = {
-                    "version": PROCESSED_LORAS_VERSION,
-                    "loras": [],
-                    "favorites": []
-                }
 
     unprocessed_count = 0
     new_loras = []
@@ -692,7 +856,7 @@ async def process_loras(request):
                     has_local_metadata = False  # Initialize
 
                     # Check for local metadata first
-                    version_info = await check_local_civitai_info(file_path)
+                    version_info = await check_local_info(file_path)
                     if version_info:
                         has_local_metadata = True  # Set flag if we found local metadata
                         logger.info("Got version info from local metadata")
@@ -719,6 +883,7 @@ async def process_loras(request):
                             "nsfw": version_info.get('model', {}).get('nsfw', False),
                             "nsfwLevel": 0,
                             "version_desc": version_info.get('description'),
+                            "reco_weight": 1,
                             "model_desc": version_info.get('model', {}).get('description'),
                             "type": version_info.get('model', {}).get('type'),
                             "subdir": subdir,
@@ -727,22 +892,30 @@ async def process_loras(request):
                             "info_version": PROCESSED_LORAS_VERSION
                         }
                         
-                        # Fetch model info if available
+                        # Fetch model info if available and we're not using local metadata
                         model_id = info_to_save["modelId"]
-                        if model_id:
+                        if model_id and not has_local_metadata:
                             model_info = await fetch_model_info(session, model_id)
                             if model_info:
                                 info_to_save["tags"] = model_info.get('tags', [])
                                 info_to_save["nsfwLevel"] = model_info.get('nsfwLevel', 0)
+                                info_to_save["model_desc"] = model_info.get('description')
+
+                        # Get custom images first
+                        custom_images = find_custom_images(file_path, base_filename)
                         
-                        # Process images
+                        # Process remote images from version_info
+                        remote_images = []
                         for image in version_info.get('images', []):
-                            info_to_save['images'].append({
+                            remote_images.append({
                                 "url": image.get('url'),
                                 "type": image.get('type'),
                                 "nsfwLevel": image.get('nsfwLevel', 0),
                                 "hasMeta": image.get('hasMeta', False)
                             })
+                        
+                        # Combine custom images first, then remote images
+                        info_to_save['images'] = custom_images + remote_images
 
                         # Handle trained_words
                         trained_words = version_info.get('trainedWords', [])
@@ -761,16 +934,23 @@ async def process_loras(request):
                             info_to_save["trained_words"] = []
                         
                         # Download the first image as preview
+                        has_local_images = version_info.get('has_local_images', False) if has_local_metadata else False
                         if info_to_save['images']:
-                            if not has_local_metadata:
+                            if not has_local_images:  # Download if not using local images or not local metadata
                                 preview_path = os.path.join(LORA_DATA_DIR, filename, "preview")
-                                os.makedirs(os.path.dirname(preview_path), exist_ok=True)  # Ensure preview directory exists
+                                os.makedirs(os.path.dirname(preview_path), exist_ok=True)  
                                 preview_filename = await download_image(session, info_to_save['images'][0]['url'], preview_path)
                                 if preview_filename:
                                     logger.info(f"Saved preview image as {preview_filename}")
+                            else:
+                                logger.info("Using existing local preview image")
                         else:
-                            # If no images are available, copy the placeholder as the preview
-                            await copy_placeholder_as_preview(base_filename)
+                            # Only copy placeholder if no local images
+                            if not has_local_images:
+                                logger.info("No images available and no local images - copying placeholder")
+                                await copy_placeholder_as_preview(base_filename)
+                            else:
+                                logger.info("No images in metadata but using local images")
                         
                         # Create the LoRA folder after successful processing
                         os.makedirs(lora_folder, exist_ok=True)
@@ -794,6 +974,7 @@ async def process_loras(request):
                             "nsfw": False,
                             "nsfwLevel": 0,
                             "version_desc": "Custom Lora",
+                            "reco_weight": 1,
                             "model_desc": None,
                             "type": None,
                             "subdir": subdir,
@@ -971,7 +1152,6 @@ async def get_lora_data(request):
         "totalCount": len(all_folders)
     })
 
-
 @PromptServer.instance.routes.post("/lora_sidebar/toggle_favorite")
 async def toggle_favorite(request):
     data = await request.json()
@@ -1004,6 +1184,41 @@ async def toggle_favorite(request):
     
     return web.json_response({"favorite": is_favorite})
 
+@PromptServer.instance.routes.post("/lora_sidebar/set_preview")
+async def set_preview_image(request):
+    try:
+        data = await request.json()
+        lora_id = data.get('id')
+        image_url = data.get('url')
+        
+        if not lora_id or not image_url:
+            return web.json_response({"error": "Missing parameters"}, status=400)
+        
+        # Get file extension from original URL
+        ext = os.path.splitext(image_url)[1].lower()
+        if not ext:
+            ext = '.jpg'  # Default to jpg if no extension found
+            
+        preview_path = os.path.join(LORA_DATA_DIR, lora_id, f"preview{ext}")
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(image_url) as response:
+                if response.status == 200:
+                    with open(preview_path, 'wb') as f:
+                        f.write(await response.read())
+                    # Generate a unique version for just this preview
+                    preview_version = str(int(time.time()))
+                    return web.json_response({
+                        "status": "success",
+                        "preview_version": preview_version
+                    })
+                else:
+                    return web.json_response({"error": "Failed to fetch image"}, status=400)
+                    
+    except Exception as e:
+        logger.error(f"Error setting preview image: {str(e)}")
+        return web.json_response({"error": str(e)}, status=500)
+
 @PromptServer.instance.routes.post("/lora_sidebar/refresh/{version_id}")
 async def refresh_lora(request):
     version_id = request.match_info['version_id']
@@ -1032,25 +1247,48 @@ async def refresh_lora(request):
                     "status": "error",
                     "message": f"LoRA with version ID {version_id} not found"
                 }, status=404)
+            
+            # Preserve existing custom images
+            existing_custom_images = [img for img in existing_info.get('images', []) 
+                                    if img.get('custom') is True]  # Explicitly check for True
 
             # Check if this LoRA uses local metadata
             if existing_info.get("local_metadata"):
-                version_info = await check_local_civitai_info(existing_info["path"])
+                version_info = await check_local_info(existing_info["path"])
                 if not version_info:
                     return web.json_response({
                         "status": "error",
                         "message": "Local metadata file no longer exists"
                     }, status=400)
+                
+                # Also get remote info for images if needed
+                if not version_info.get('images'):
+                    remote_info = await fetch_version_info_by_id(session, version_id)
+                    if remote_info and remote_info.get('images'):
+                        version_info['images'] = remote_info['images']
             else:
                 version_info = await fetch_version_info_by_id(session, version_id)
-                if not version_info:
-                    return web.json_response({
-                        "status": "error",
-                        "message": "Failed to fetch updated version info"
-                    }, status=400)
 
             # Initialize updates dictionary
             updates = {}
+
+            # Make modelid call to get missing data from versionid
+            if version_info:
+                model_id = version_info.get('modelId') or existing_info.get('modelId')
+                
+                if model_id:
+                    logger.info(f"Fetching model info for model ID: {model_id}")
+                    model_info = await fetch_model_info(session, model_id)
+                    if model_info:
+                        # Update version_info with model data
+                        if model_info.get('tags'):
+                            updates['tags'] = model_info.get('tags', [])
+                        if model_info.get('nsfwLevel') is not None:
+                            updates['nsfwLevel'] = model_info.get('nsfwLevel', 0)
+                        if model_info.get('description'):
+                            updates['model_desc'] = model_info.get('description')
+                        
+                        logger.info(f"Updated model info fields: tags:{len(updates.get('tags', []))} nsfw:{updates.get('nsfwLevel')} desc:{len(updates.get('model_desc', '')) if updates.get('model_desc') else 'none'}")
 
             # 1. Update 'name' correctly from 'model.name'
             new_name = version_info.get('model', {}).get('name', existing_info.get('name'))
@@ -1084,19 +1322,42 @@ async def refresh_lora(request):
                 updates['description'] = new_description
 
             # 5. Check if there are new images
-            new_images = version_info.get('images')
-            if new_images and new_images != existing_info.get('images'):
-                updates['images'] = [
-                    {
-                        "url": image.get('url'),
-                        "type": image.get('type'),
-                        "nsfwLevel": image.get('nsfwLevel', 0),
-                        "hasMeta": image.get('hasMeta', False)
-                    } for image in new_images
-                ]
+            new_remote_images = []
+            for image in version_info.get('images', []):
+                logger.info(f"Processing image: {image.keys() if isinstance(image, dict) else 'Not a dict'}")
+                image_data = {
+                    "url": image.get('url'),
+                    "type": image.get('type'),
+                    "nsfwLevel": image.get('nsfwLevel', 0),
+                    "hasMeta": image.get('hasMeta', False)
+                }
+                if image_data['url']:  # Only add if we got a URL
+                    new_remote_images.append(image_data)
+
+            # Add debug logging
+            logger.info(f"Final combined images: {existing_custom_images + new_remote_images}")
+
+            updates['images'] = existing_custom_images + new_remote_images
+
+            # Look for any new custom images
+            if LORA_FILE_INFO.get(base_filename):
+                file_path = LORA_FILE_INFO[base_filename]['path']
+                current_custom_images = find_custom_images(file_path, base_filename)
+                
+                # Merge with existing custom images, avoiding duplicates
+                existing_custom_urls = {img['url'] for img in existing_custom_images}
+                new_custom_images = [img for img in current_custom_images 
+                                   if img['url'] not in existing_custom_urls]
+                
+                if new_custom_images or len(current_custom_images) != len(existing_custom_images):
+                    # Update if there are new images or some were removed
+                    existing_custom_images = current_custom_images
+            
+            # Combine custom and remote images
+            updates['images'] = existing_custom_images + new_remote_images
 
             # If there are updates, apply them
-            if updates:
+            if updates or existing_custom_images:
                 logger.info(f"Applying updates to LoRA {existing_lora_folder}: {updates}")
                 existing_info.update(updates)
 
@@ -1134,12 +1395,15 @@ async def refresh_lora(request):
                             with open(processed_loras_file, 'w', encoding="utf-8") as f:
                                 json.dump(existing_data, f, indent=4, ensure_ascii=False)
 
-                # Only update the preview image if there's a new first image
-                if 'images' in updates and updates['images']:
+                # Update the preview image if there's a new first remote image
+                has_local_images = version_info.get('has_local_images', False) if existing_info.get("local_metadata") else False
+                if new_remote_images and not existing_custom_images and not has_local_images:
                     preview_path = os.path.join(existing_lora_folder, "preview")
-                    preview_filename = await download_image(session, updates['images'][0]['url'], preview_path)
+                    preview_filename = await download_image(session, new_remote_images[0]['url'], preview_path)
                     if preview_filename:
                         logger.info(f"Updated preview image as {preview_filename}")
+                else:
+                    logger.info("Skipping preview image update - using local images or has custom images")
 
                 # Save updated information to the existing JSON file
                 info_file_path = os.path.join(existing_lora_folder, "info.json")
