@@ -29,8 +29,10 @@ class LoraSidebar {
         this.filteredData = [];
         this.minSize = 100;
         this.maxSize = 400;
-        this.loadingDelay = 800; // continuous loading delay in ms
+        this.loadingDelay = 800; // continuous loading delay
         this.initialIndex = 500;
+        this.searchDelay = 150;
+        this.searchTimeout = null;
         this.batchSize = app.ui.settings.getSettingValue("LoRA Sidebar.General.batchSize", 500);
         this.nextStartIndex = this.initialIndex + 1;
         this.savedElementSize = app.ui.settings.getSettingValue("LoRA Sidebar.General.thumbnailSize", 125);
@@ -55,6 +57,8 @@ class LoraSidebar {
         debug.log("After loading CUSTOM_TAGS:", this.CUSTOM_TAGS);
         this.tagSource = app.ui.settings.getSettingValue("LoRA Sidebar.General.tagSource", "CivitAI");
         debug.log("Tag source:", this.tagSource);
+        this.a1111Style = app.ui.settings.getSettingValue("LoRA Sidebar.General.a1111Style", false);
+        this.UseRG3 = app.ui.settings.getSettingValue("LoRA Sidebar.General.useRG3", false);
         
         this.element = $el("div.lora-sidebar", [
             $el("div.lora-sidebar-content", [
@@ -184,7 +188,7 @@ class LoraSidebar {
                 type: "text",
                 placeholder: "Search name, tags, model, etc.",
                 value: this.state.searchTerm,
-                oninput: (e) => this.handleSearch(e.target.value)
+                oninput: (e) => this.debouncedSearch(e.target.value)
             }),
             $el("button.search-clear", {
                 innerHTML: "&#x2715;",
@@ -192,12 +196,24 @@ class LoraSidebar {
                 onclick: () => {
                     const searchInput = this.element.querySelector('.search-input');
                     searchInput.value = '';
-                    this.handleSearch('');
+                    this.debouncedSearch('');
                 }
             })
         ]);
     
         return searchContainer;
+    }
+
+    debouncedSearch(searchInput) {
+        // Clear any existing timeout
+        if (this.searchTimeout) {
+            clearTimeout(this.searchTimeout);
+        }
+
+        // Set a new timeout
+        this.searchTimeout = setTimeout(() => {
+            this.handleSearch(searchInput);
+        }, this.searchDelay);
     }
 
     createLoadingIndicator() {
@@ -369,25 +385,65 @@ class LoraSidebar {
 
     getCategoryItems(categoryName) {
         const activeTags = this.getActiveTags();
+        let items;
+
         if (categoryName === "Favorites") {
-            return this.filteredData.filter(lora => lora.favorite);
+            items = this.filteredData.filter(lora => lora.favorite);
         } else if (this.sortModels === 'Subdir') {
-            return this.filteredData.filter(lora => {
+            items = this.filteredData.filter(lora => {
                 const parts = lora.subdir ? lora.subdir.split('\\') : [];
                 return parts[parts.length - 1] === categoryName || (categoryName === "Unsorted" && !lora.subdir);
             });
         } else if (this.sortModels === 'Tags') {
             if (activeTags.includes(categoryName)) {
-                return this.filteredData.filter(lora => 
+                items = this.filteredData.filter(lora => 
                     lora.tags && lora.tags.includes(categoryName)
                 );
             } else if (categoryName === 'Unsorted') {
-                return this.filteredData.filter(lora => 
+                items = this.filteredData.filter(lora => 
                     !lora.tags || !activeTags.some(tag => lora.tags.includes(tag))
                 );
             }
         }
-        return [];
+
+        // THIS IS WHERE OUR SORT HAPPENS AND WILL NEED A LOT OF LOVE LATER
+        if (items && items.length > 0) {
+            items.sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase()));
+        }
+
+        return items || [];
+    }
+
+    sanitizeHTML(html) {
+        // Create a temporary element
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        
+        // Remove any script tags
+        const scripts = temp.getElementsByTagName('script');
+        while (scripts[0]) {
+            scripts[0].parentNode.removeChild(scripts[0]);
+        }
+        
+        // Remove any style tags
+        const styles = temp.getElementsByTagName('style');
+        while (styles[0]) {
+            styles[0].parentNode.removeChild(styles[0]);
+        }
+        
+        // Remove any on* attributes (onclick, onmouseover, etc.)
+        const all = temp.getElementsByTagName('*');
+        for (let i = 0; i < all.length; i++) {
+            const attrs = all[i].attributes;
+            for (let j = attrs.length - 1; j >= 0; j--) {
+                if (attrs[j].name.startsWith('on')) {
+                    all[i].removeAttribute(attrs[j].name);
+                }
+            }
+        }
+        
+        // Return the sanitized HTML
+        return temp.innerHTML;
     }
         
     matchesModelFilter(lora, filter) {
@@ -658,123 +714,157 @@ class LoraSidebar {
     }
 
     renderLoraGallery(startIndex = 0, count = 500) {
-        if (startIndex === 0) {
-            this.galleryContainer.innerHTML = '';
-        }
-
-        debug.log(`renderLoraGallery called with startIndex: ${startIndex}, count: ${count}`);
-        debug.log(`Current filteredData length: ${this.filteredData.length}`);
-    
-        // Render Favorites
-        const favorites = this.filteredData.filter(lora => lora.favorite);
-        if (favorites.length > 0 && startIndex === 0) {
-            const favoritesCategory = this.createCategoryElement("Favorites", favorites);
-            this.galleryContainer.appendChild(favoritesCategory);
-        }
-    
-        // Render LoRAs (excluding favorites)
-        const nonFavorites = this.filteredData.filter(lora => !lora.favorite);
-        const endIndex = Math.min(startIndex + count, nonFavorites.length);
-        const lorasToRender = nonFavorites.slice(startIndex, endIndex);
-    
-        if (this.sortModels === 'Subdir') {
-            const categories = {};
-            lorasToRender.forEach(lora => {
-                // NSFW check
-                if (this.isNSFW(lora) && !this.showNSFW) {
-                    return;
-                }
-
-                let category = 'Unsorted';
-                if (lora.subdir) {
-                    const parts = lora.subdir.split('\\');
-                    category = parts[parts.length - 1];
-                }
-                if (!categories[category]) {
-                    categories[category] = [];
-                }
-                categories[category].push(lora);
-            });
-    
-            Object.entries(categories).forEach(([category, loras]) => {
-                if (loras.length > 0) {
-                    let categoryElement = this.galleryContainer.querySelector(`.lora-category[data-category="${category}"]`);
-                    if (!categoryElement) {
-                        categoryElement = this.createCategoryElement(category, loras);
-                        this.galleryContainer.appendChild(categoryElement);
-                    } else {
-                        // Only show if the category is expanded
-                        const lorasContainer = categoryElement.querySelector('.lora-items-container');
-                        const isExpanded = window.getComputedStyle(lorasContainer).display !== 'none';
-                        this.createCategoryElement(category, loras, true); // Always create elements, even if category is closed
-                        if (!isExpanded) {
-                            lorasContainer.style.display = 'none'; // Ensure the container stays hidden if it was closed
-                        }
-                    }
-                }
-            });
-
-            this.sortCategories();
-
-        } else if (this.sortModels === 'Tags') {
-            const activeTags = this.getActiveTags();
-            const categories = {};
-            activeTags.forEach(tag => {
-                categories[tag] = [];
-            });
-            categories['Unsorted'] = [];
-    
-            lorasToRender.forEach(lora => {
-                // NSFW check
-                if (this.isNSFW(lora) && !this.showNSFW) {
-                    return;
-                }
-
-                let categorized = false;
-                for (const tag of activeTags) {
-                    if (lora.tags && lora.tags.includes(tag)) {
-                        categories[tag].push(lora);
-                        categorized = true;
-                        break; // Stop after first matching tag
-                    }
-                }
-                if (!categorized) {
-                    categories['Unsorted'].push(lora);
-                }
-            });
-    
-            Object.entries(categories).forEach(([category, loras]) => {
-                if (loras.length > 0) { // Only create categories that have LoRAs
-                    let categoryElement = this.galleryContainer.querySelector(`.lora-category[data-category="${category}"]`);
-                    if (!categoryElement) {
-                        categoryElement = this.createCategoryElement(category, loras);
-                        this.galleryContainer.appendChild(categoryElement);
-                    } else {
-                        const lorasContainer = categoryElement.querySelector('.lora-items-container');
-                        const isExpanded = window.getComputedStyle(lorasContainer).display !== 'none';
-                        this.createCategoryElement(category, loras, true); // Always create elements, even if category is closed
-                        if (!isExpanded) {
-                            lorasContainer.style.display = 'none'; // Ensure the container stays hidden if it was closed
-                        }
-                    }
-                }
-            });
-
-            this.sortCategories();
-
-        } else {
-            // Original rendering logic for 'None' sorting option
-            let allLorasCategory = this.galleryContainer.querySelector('.lora-category[data-category="All LoRAs"]');
-            if (!allLorasCategory || startIndex === 0) {
-                allLorasCategory = this.createCategoryElement("All LoRAs", lorasToRender);
-                this.galleryContainer.appendChild(allLorasCategory);
-            } else {
-                this.createCategoryElement("All LoRAs", lorasToRender, true);
+        try {
+            if (startIndex === 0) {
+                this.galleryContainer.innerHTML = '';
             }
-        }
     
-        this.updateGalleryLayout();
-        this.initialRenderComplete = true;
+            debug.log(`renderLoraGallery called with startIndex: ${startIndex}, count: ${count}`);
+            debug.log(`Current filteredData length: ${this.filteredData.length}`);
+        
+            // Render Favorites
+            const favorites = this.filteredData.filter(lora => lora.favorite);
+            if (favorites.length > 0 && startIndex === 0) {
+                try {
+                    const favoritesCategory = this.createCategoryElement("Favorites", favorites);
+                    if (favoritesCategory) {
+                        this.galleryContainer.appendChild(favoritesCategory);
+                    }
+                } catch (error) {
+                    console.error('Error rendering favorites:', error);
+                }
+            }
+        
+            // Render LoRAs (excluding favorites)
+            const nonFavorites = this.filteredData.filter(lora => !lora.favorite);
+            const endIndex = Math.min(startIndex + count, nonFavorites.length);
+            const lorasToRender = nonFavorites.slice(startIndex, endIndex);
+        
+            if (this.sortModels === 'Subdir') {
+                const categories = {};
+                lorasToRender.forEach(lora => {
+                    try {
+                        // NSFW check
+                        if (this.isNSFW(lora) && !this.showNSFW) {
+                            return;
+                        }
+    
+                        let category = 'Unsorted';
+                        if (lora.subdir) {
+                            const parts = lora.subdir.split('\\');
+                            category = parts[parts.length - 1];
+                        }
+                        if (!categories[category]) {
+                            categories[category] = [];
+                        }
+                        categories[category].push(lora);
+                    } catch (error) {
+                        console.error('Error processing LoRA:', lora, error);
+                    }
+                });
+        
+                Object.entries(categories).forEach(([category, loras]) => {
+                    try {
+                        if (loras.length > 0) {
+                            let categoryElement = this.galleryContainer.querySelector(`.lora-category[data-category="${category}"]`);
+                            if (!categoryElement) {
+                                categoryElement = this.createCategoryElement(category, loras);
+                                if (categoryElement) {
+                                    this.galleryContainer.appendChild(categoryElement);
+                                }
+                            } else {
+                                const lorasContainer = categoryElement.querySelector('.lora-items-container');
+                                const isExpanded = window.getComputedStyle(lorasContainer).display !== 'none';
+                                this.createCategoryElement(category, loras, true);
+                                if (!isExpanded) {
+                                    lorasContainer.style.display = 'none';
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error creating category:', category, error);
+                    }
+                });
+    
+                this.sortCategories();
+    
+            } else if (this.sortModels === 'Tags') {
+                const activeTags = this.getActiveTags();
+                const categories = {};
+                activeTags.forEach(tag => {
+                    categories[tag] = [];
+                });
+                categories['Unsorted'] = [];
+        
+                lorasToRender.forEach(lora => {
+                    try {
+                        // NSFW check
+                        if (this.isNSFW(lora) && !this.showNSFW) {
+                            return;
+                        }
+    
+                        let categorized = false;
+                        for (const tag of activeTags) {
+                            if (lora.tags && lora.tags.includes(tag)) {
+                                categories[tag].push(lora);
+                                categorized = true;
+                                break;
+                            }
+                        }
+                        if (!categorized) {
+                            categories['Unsorted'].push(lora);
+                        }
+                    } catch (error) {
+                        console.error('Error processing LoRA:', lora, error);
+                    }
+                });
+        
+                Object.entries(categories).forEach(([category, loras]) => {
+                    try {
+                        if (loras.length > 0) {
+                            let categoryElement = this.galleryContainer.querySelector(`.lora-category[data-category="${category}"]`);
+                            if (!categoryElement) {
+                                categoryElement = this.createCategoryElement(category, loras);
+                                if (categoryElement) {
+                                    this.galleryContainer.appendChild(categoryElement);
+                                }
+                            } else {
+                                const lorasContainer = categoryElement.querySelector('.lora-items-container');
+                                const isExpanded = window.getComputedStyle(lorasContainer).display !== 'none';
+                                this.createCategoryElement(category, loras, true);
+                                if (!isExpanded) {
+                                    lorasContainer.style.display = 'none';
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error creating category:', category, error);
+                    }
+                });
+    
+                this.sortCategories();
+    
+            } else {
+                try {
+                    let allLorasCategory = this.galleryContainer.querySelector('.lora-category[data-category="All LoRAs"]');
+                    if (!allLorasCategory || startIndex === 0) {
+                        allLorasCategory = this.createCategoryElement("All LoRAs", lorasToRender);
+                        if (allLorasCategory) {
+                            this.galleryContainer.appendChild(allLorasCategory);
+                        }
+                    } else {
+                        this.createCategoryElement("All LoRAs", lorasToRender, true);
+                    }
+                } catch (error) {
+                    console.error('Error creating All LoRAs category:', error);
+                }
+            }
+        
+            this.updateGalleryLayout();
+            this.initialRenderComplete = true;
+        } catch (error) {
+            console.error('Critical error in renderLoraGallery:', error);
+        }
     }
 
     setupScrollHandler() {
@@ -1011,131 +1101,136 @@ class LoraSidebar {
     }
 
     createLoraElement(lora, forceRefresh = false) {
-        const container = $el("div.lora-item");
-        const previewUrl = forceRefresh 
-        ? `/lora_sidebar/preview/${encodeURIComponent(lora.id)}?cb=${Date.now()}`
-        : `/lora_sidebar/preview/${encodeURIComponent(lora.id)}`;
-        
-        let isVideo = false;
-        let previewElement;
-        
-        const createPreviewElement = (tryVideo = false) => {
-            isVideo = tryVideo;
-            const elementType = isVideo ? "video" : "img";
-            const element = $el(elementType, {
-                src: previewUrl,
-                alt: lora.name,
-                draggable: true,
-                ...(isVideo && { loop: true, muted: true }),
-                ondragstart: (e) => {
-                    const dragData = JSON.stringify({
-                        type: "comfy-lora",
-                        id: lora.id
-                    });
-                    e.dataTransfer.setData("application/json", dragData);
-                    this.handleDragStart(e);
-                },
-                onerror: (e) => {
-                    if (!e.target.hasAttribute('data-error-handled')) {
-                        e.target.setAttribute('data-error-handled', 'true');
-                        if (!isVideo) {
-                            const videoElement = createPreviewElement(true);
-                            container.replaceChild(videoElement, previewElement);
-                            previewElement = videoElement;
-                        } else {
-                            debug.log(`Using placeholder for ${lora.name}`);
-                            const imgElement = $el("img", {
-                                src: this.placeholderUrl,
-                                alt: lora.name,
-                                draggable: true
+        try {
+                const container = $el("div.lora-item");
+                const previewUrl = forceRefresh 
+                ? `/lora_sidebar/preview/${encodeURIComponent(lora.id)}?cb=${Date.now()}`
+                : `/lora_sidebar/preview/${encodeURIComponent(lora.id)}`;
+                
+                let isVideo = false;
+                let previewElement;
+                
+                const createPreviewElement = (tryVideo = false) => {
+                    isVideo = tryVideo;
+                    const elementType = isVideo ? "video" : "img";
+                    const element = $el(elementType, {
+                        src: previewUrl,
+                        alt: lora.name,
+                        draggable: true,
+                        ...(isVideo && { loop: true, muted: true }),
+                        ondragstart: (e) => {
+                            const dragData = JSON.stringify({
+                                type: "comfy-lora",
+                                id: lora.id
                             });
-                            container.replaceChild(imgElement, previewElement);
-                            previewElement = imgElement;
-                            isVideo = false;
-                        }
-                    }
-                },
-                onloadedmetadata: isVideo ? (e) => {
-                    if (e.target.videoWidth === 0 && e.target.videoHeight === 0) {
-                        debug.log(`Invalid video for ${lora.name}, using placeholder`);
-                        const imgElement = $el("img", {
-                            src: this.placeholderUrl,
-                            alt: lora.name,
-                            draggable: true
+                            e.dataTransfer.setData("application/json", dragData);
+                            this.handleDragStart(e);
+                        },
+                        onerror: (e) => {
+                            if (!e.target.hasAttribute('data-error-handled')) {
+                                e.target.setAttribute('data-error-handled', 'true');
+                                if (!isVideo) {
+                                    const videoElement = createPreviewElement(true);
+                                    container.replaceChild(videoElement, previewElement);
+                                    previewElement = videoElement;
+                                } else {
+                                    debug.log(`Using placeholder for ${lora.name}`);
+                                    const imgElement = $el("img", {
+                                        src: this.placeholderUrl,
+                                        alt: lora.name,
+                                        draggable: true
+                                    });
+                                    container.replaceChild(imgElement, previewElement);
+                                    previewElement = imgElement;
+                                    isVideo = false;
+                                }
+                            }
+                        },
+                        onloadedmetadata: isVideo ? (e) => {
+                            if (e.target.videoWidth === 0 && e.target.videoHeight === 0) {
+                                debug.log(`Invalid video for ${lora.name}, using placeholder`);
+                                const imgElement = $el("img", {
+                                    src: this.placeholderUrl,
+                                    alt: lora.name,
+                                    draggable: true
+                                });
+                                container.replaceChild(imgElement, previewElement);
+                                previewElement = imgElement;
+                                isVideo = false;
+                            }
+                        } : null
+                    });
+                    return element;
+                };
+            
+                previewElement = createPreviewElement();
+            
+                const overlay = $el("div.lora-overlay", {
+                    draggable: true,
+                    ondragstart: (e) => {
+                        e.stopPropagation();
+                        const dragData = JSON.stringify({
+                            type: "comfy-lora",
+                            id: lora.id
                         });
-                        container.replaceChild(imgElement, previewElement);
-                        previewElement = imgElement;
-                        isVideo = false;
+                        debug.log("Setting drag data from overlay:", dragData);
+                        e.dataTransfer.setData("application/json", dragData);
+                        this.handleDragStart(e);
                     }
-                } : null
-            });
-            return element;
-        };
-    
-        previewElement = createPreviewElement();
-    
-        const overlay = $el("div.lora-overlay", {
-            draggable: true,
-            ondragstart: (e) => {
-                e.stopPropagation();
-                const dragData = JSON.stringify({
-                    type: "comfy-lora",
-                    id: lora.id
                 });
-                debug.log("Setting drag data from overlay:", dragData);
-                e.dataTransfer.setData("application/json", dragData);
-                this.handleDragStart(e);
-            }
-        });
-    
-        const buttonContainer = $el("div.lora-buttons", [
-            this.createButton("📋", "Copy", () => this.copyTrainedWords(lora)),
-            this.createButton("🔄", "Refresh", () => this.refreshLora(lora)),
-            this.createButton(lora.favorite ? "★" : "☆", "Favorite", () => this.toggleFavorite(lora)),
-            this.createButton("ℹ️", "Info", (e) => this.showLoraInfo(lora, e.target)),
-        ]);
-    
-        const fontSize = this.getFontSizeBasedOnLength(lora.name);
-    
-        const titleContainer = $el("div.lora-title", [
-            $el("h4", { 
-                textContent: lora.name,
-                style: { fontSize: fontSize }
-            })
-        ]);
-    
-        overlay.appendChild(buttonContainer);
-        overlay.appendChild(titleContainer);
+            
+                const buttonContainer = $el("div.lora-buttons", [
+                    this.createButton("📋", "Copy", () => this.copyTrainedWords(lora)),
+                    this.createButton("🔄", "Refresh", () => this.refreshLora(lora)),
+                    this.createButton(lora.favorite ? "★" : "☆", "Favorite", () => this.toggleFavorite(lora)),
+                    this.createButton("ℹ️", "Info", (e) => this.showLoraInfo(lora, e.target)),
+                ]);
+            
+                const fontSize = this.getFontSizeBasedOnLength(lora.name);
+            
+                const titleContainer = $el("div.lora-title", [
+                    $el("h4", { 
+                        textContent: lora.name,
+                        style: { fontSize: fontSize }
+                    })
+                ]);
+            
+                overlay.appendChild(buttonContainer);
+                overlay.appendChild(titleContainer);
 
-        if (this.isNSFW(lora) && this.nsfwThreshold < 50) {
-            container.classList.add('nsfw');
-            const nsfwLabel = $el("span.nsfw-label", {
-                textContent: lora.nsfw ? "NSFW" : `NSFW Level: ${lora.nsfwLevel}`
-            });
-            container.appendChild(nsfwLabel);
-        }
-    
-        // Add hover events to the overlay for video control
-        overlay.addEventListener('mouseenter', () => {
-            if (isVideo && previewElement instanceof HTMLVideoElement) {
-                previewElement.play().then(() => {
-                }).catch(error => {
-                    console.error(`Error playing video for ${lora.name}:`, error);
+                if (this.isNSFW(lora) && this.nsfwThreshold < 50) {
+                    container.classList.add('nsfw');
+                    const nsfwLabel = $el("span.nsfw-label", {
+                        textContent: lora.nsfw ? "NSFW" : `NSFW Level: ${lora.nsfwLevel}`
+                    });
+                    container.appendChild(nsfwLabel);
+                }
+            
+                // Add hover events to the overlay for video control
+                overlay.addEventListener('mouseenter', () => {
+                    if (isVideo && previewElement instanceof HTMLVideoElement) {
+                        previewElement.play().then(() => {
+                        }).catch(error => {
+                            console.error(`Error playing video for ${lora.name}:`, error);
+                        });
+                    }
                 });
+                
+                overlay.addEventListener('mouseleave', () => {
+                    if (isVideo && previewElement instanceof HTMLVideoElement) {
+                        previewElement.pause();
+                        previewElement.currentTime = 0;
+                    }
+                });
+            
+                container.appendChild(previewElement);
+                container.appendChild(overlay);
+            
+                return container;
+            } catch (error) {
+                console.error('Failed to create LoRA element:', lora?.name || 'unknown', error);
+                return null;
             }
-        });
-        
-        overlay.addEventListener('mouseleave', () => {
-            if (isVideo && previewElement instanceof HTMLVideoElement) {
-                previewElement.pause();
-                previewElement.currentTime = 0;
-            }
-        });
-    
-        container.appendChild(previewElement);
-        container.appendChild(overlay);
-    
-        return container;
     }
     
     createButton(icon, tooltip, onClick) {
@@ -1308,8 +1403,10 @@ class LoraSidebar {
     
                     const nodeData = {
                         name: loraData.name,
+                        reco_weight: loraData.reco_weight,
                         path: loraData.subdir || "",
-                        filename: loraData.filename
+                        filename: loraData.filename,
+                        trainedWords: loraData.trained_words
                     };
     
                     let attempts = 0;
@@ -1323,9 +1420,58 @@ class LoraSidebar {
                             try {
                                 const node = app.graph.getNodeOnPos(dropX, dropY);
                                 
-                                if (node && node.type === "LoraLoader") {
-                                    this.updateLoraNode(node, nodeData);
-                                    debug.log("Successfully updated node");
+                                if (node) {
+                                    if (node.type === "LoraLoader" || node.type === "Power Lora Loader (rgthree)") {
+                                        this.updateLoraNode(node, loraData);
+                                        debug.log("Successfully updated node");
+                                    } else if (nodeData.trainedWords?.length > 0) {
+                                        // Check if node has any text widgets
+                                        const textWidget = node.widgets?.find(w => 
+                                            w.name === "text" ||
+                                            w.name === "string" ||
+                                            w.name === "prompt"  // Some nodes might use "prompt" for text input
+                                        );
+                                        node.widgets?.forEach(w => {
+                                            debug.log("Widget:", w.name, "Type:", w.type, "Widget type:", w.widget_type);
+                                            debug.log("Node:", node.name, "Type:", node.type);
+                                        });
+                                        
+                                        if (textWidget) {
+                                            // Append the first trained word to existing text
+                                            const currentText = textWidget.value || "";
+                                            let newText = currentText;
+                                            let trainedWords = nodeData.trainedWords[0];
+
+                                            // If a1111Style is enabled, prefix the trained word with the LoRA syntax
+                                            if (this.a1111Style) {
+                                                // Format the path+name part, using / for subdir separator
+                                                const loraPath = nodeData.path ? `${nodeData.path}/` : '';
+                                                const loraPart = `${loraPath}${nodeData.name}`;
+                                                // Get weight, default to 1 if not present
+                                                const weight = nodeData.reco_weight ?? 1;
+                                                // Format the weight to avoid unnecessary decimal places
+                                                const weightStr = weight.toString().includes('.') ? weight.toFixed(2) : weight;
+                                                // Construct the full A1111 style prefix
+                                                trainedWords = `<lora:${loraPart}:${weightStr}>, ${trainedWords}`;
+                                            }
+
+                                            if (currentText.length > 0) {
+                                                if (currentText.endsWith(", ")) {
+                                                    newText = currentText + trainedWords;
+                                                } else if (currentText.endsWith(",")) {
+                                                    newText = currentText + " " + trainedWords;
+                                                } else {
+                                                    newText = currentText + ", " + trainedWords;
+                                                }
+                                            } else {
+                                                newText = trainedWords;
+                                            }
+                                            
+                                            textWidget.value = newText;
+                                            node.setDirtyCanvas(true, true);
+                                            debug.log("Successfully added trigger word to text widget");
+                                        }
+                                    }
                                 } else {
                                     this.createLoraNode(nodeData, dropX, dropY);
                                     debug.log("Successfully created node");
@@ -1377,37 +1523,118 @@ class LoraSidebar {
     
     
     createLoraNode(loraData, x, y) {
-        const node = LiteGraph.createNode("LoraLoader");
-        node.pos = [x, y];
-        
-        // Set node title
-        node.title = `Lora - ${loraData.name}`;
-        
-        // Set widget values
-        for (const widget of node.widgets) {
-            if (widget.name === "lora_name") {
-                widget.value = `${loraData.path}${loraData.path ? '\\' : ''}${loraData.filename}`;
+        if (this.UseRG3) {
+            // Create Power Lora Loader node
+            const node = LiteGraph.createNode("Power Lora Loader (rgthree)");
+            node.pos = [x, y];
+            
+            // Add the node to the graph (this needs to happen before we add widgets)
+            app.graph.add(node);
+            
+            // Use our existing code to add the lora to the new node
+            const widget = node.addNewLoraWidget();
+            
+            const weight = loraData.reco_weight ?? 1;
+            const loraPath = `${loraData.path}${loraData.path ? '\\' : ''}${loraData.filename}`;
+            
+            widget.value = {
+                on: true,
+                lora: loraPath,
+                strength: weight,
+                strengthTwo: null
+            };
+    
+            widget.loraInfo = {
+                file: loraData.filename,
+                path: loraPath,
+                images: []
+            };
+    
+            // Handle node resizing
+            const computed = node.computeSize();
+            const tempHeight = node._tempHeight ?? 15;
+            node.size[1] = Math.max(tempHeight, computed[1]);
+            
+            node.setDirtyCanvas(true, true);
+        } else {
+            // Original LoraLoader code
+            const node = LiteGraph.createNode("LoraLoader");
+            node.pos = [x, y];
+            
+            // Set node title
+            node.title = `Lora - ${loraData.name}`;
+            
+            // Get recommended weight, default to 1 if not present
+            const weight = loraData.reco_weight ?? 1;
+            
+            // Set widget values
+            for (const widget of node.widgets) {
+                if (widget.name === "lora_name") {
+                    widget.value = `${loraData.path}${loraData.path ? '\\' : ''}${loraData.filename}`;
+                } else if (widget.name === "strength_model") {
+                    widget.value = weight;
+                } else if (widget.name === "strength_clip") {
+                    widget.value = weight;
+                }
             }
+            
+            // Add the node to the graph
+            app.graph.add(node);
         }
-        
-        // Add the node to the graph
-        app.graph.add(node);
         
         // Ensure the canvas is updated
         app.graph.setDirtyCanvas(true, true);
     }
 
     updateLoraNode(node, loraData) {
-        // Update the node title
-        node.title = `Lora - ${loraData.name}`;
-        
-        // Update widget values
-        for (const widget of node.widgets) {
-            if (widget.name === "lora_name") {
-                widget.value = `${loraData.path}${loraData.path ? '\\' : ''}${loraData.filename}`;
+        // Handle different node types
+        if (node.type === "LoraLoader") {
+            // Update the node title
+            node.title = `Lora - ${loraData.name}`;
+            
+            // Get recommended weight, default to 1 if not present
+            const weight = loraData.reco_weight ?? 1;
+            
+            // Update widget values
+            for (const widget of node.widgets) {
+                if (widget.name === "lora_name") {
+                    widget.value = `${loraData.subdir}${loraData.subdir ? '\\' : ''}${loraData.filename}`;
+                } else if (widget.name === "strength_model") {
+                    widget.value = weight;
+                } else if (widget.name === "strength_clip") {
+                    widget.value = weight;
+                }
             }
-        }
+
+        } else if (node.type === "Power Lora Loader (rgthree)") {
+            console.error("Starting update with data:", loraData);
         
+            const widget = node.addNewLoraWidget();
+            console.error("Created widget:", widget);
+    
+            const weight = loraData.reco_weight ?? 1;
+            const loraPath = `${loraData.subdir}${loraData.subdir ? '\\' : ''}${loraData.filename}`;
+            
+            widget.value = {
+                on: true,
+                lora: loraPath,
+                strength: weight,
+                strengthTwo: null
+            };
+    
+            widget.loraInfo = {
+                file: loraData.filename,
+                path: loraPath,
+                images: []
+            };
+    
+            // Handle node resizing
+            const computed = node.computeSize();
+            const tempHeight = node._tempHeight ?? 15;
+            node.size[1] = Math.max(tempHeight, computed[1]);
+            
+            node.setDirtyCanvas(true, true);
+        }
         // Ensure the canvas is updated
         app.graph.setDirtyCanvas(true, true);
     }
@@ -1419,7 +1646,18 @@ class LoraSidebar {
         }
     
         // Create the popup container
-        const popup = $el("div.model-info-popup", { className: "model-info-popup" });
+        const popup = $el("div.model-info-popup", { 
+            className: "model-info-popup",
+            onmousedown: (e) => {
+                // Store the initial mouse down target
+                popup.dataset.mouseDownTarget = 'inside';
+                e.stopPropagation();
+            },
+            onmouseleave: () => {
+                // Clear the target if mouse leaves the popup
+                popup.dataset.mouseDownTarget = '';
+            }
+        });
     
         // Create the close button
         const closeButton = $el("button", {
@@ -1504,6 +1742,7 @@ class LoraSidebar {
                                                 newLoraElement.style.width = existingLoraContainer.style.width;
                                             }
                                             existingLoraContainer.replaceWith(newLoraElement);
+                                            console.log('We got a response and tried to replce the container.');
                                         }
                                     }
                                 } catch (error) {
@@ -1593,41 +1832,41 @@ class LoraSidebar {
                                 };
 
                                 const imageContainer = $el("div.image-container");
-                                const popup = $el("div.image-popup", [imageContainer]);
+                                const popup = $el("div.image-popup", {
+                                    onclick: (e) => {
+                                        if (e.target === popup) {
+                                            e.stopPropagation();
+                                            popup.remove();
+                                        }
+                                    }
+                                }, [imageContainer]);
                                 imageContainer.replaceChildren(...createPopupContent(currentIndex));
                                 
                                 document.body.appendChild(popup);
 
                                 // Close when clicking outside or pressing escape
                                 const closePopup = (e) => {
-                                    if (e.key === 'Escape' || e.target === popup) {
+                                    if (e.key === 'Escape') {
+                                        e.stopPropagation();  // Prevent the escape from bubbling
                                         popup.remove();
                                         document.removeEventListener('keydown', closePopup);
-                                        document.removeEventListener('click', closePopup);
                                     }
                                 };
 
-                                // Also close if clicking on the info popup
+                                // Also close if clicking on the info popup background
                                 const infoPopup = document.querySelector('.model-info-popup');
                                 if (infoPopup) {
                                     infoPopup.addEventListener('click', (e) => {
+                                        // Only handle clicks on the actual background of the info popup
                                         if (e.target === infoPopup) {
+                                            e.stopPropagation();  // Prevent the click from closing the info popup
                                             popup.remove();
                                         }
                                     });
                                 }
 
-                                // Close if info popup is closed
-                                const observer = new MutationObserver((mutations) => {
-                                    if (!document.contains(this.currentPopup)) {
-                                        popup.remove();
-                                        observer.disconnect();
-                                    }
-                                });
-                                observer.observe(document.body, { childList: true, subtree: true });
-
+                                // Close if esc is pressed
                                 document.addEventListener('keydown', closePopup);
-                                document.addEventListener('click', closePopup);
                             }
                         })
                     ]);
@@ -1756,18 +1995,444 @@ class LoraSidebar {
             contentContainer.appendChild(civitAiLink);
         }
 
-        // Add LoRA name and version name
-        const nameContainer = $el("div.name-container");
-        const nameElement = $el("h3", { textContent: lora.name, className: "lora-name" });
-        nameContainer.appendChild(nameElement);
-        
-        if (lora.versionName) {
-            const versionElement = $el("p", { 
-                textContent: `Version: ${lora.versionName}`, 
-                className: "version-name" 
+        const createDescriptionPopup = (description, event) => {
+            // Remove any existing description popup
+            const existingPopup = document.querySelector('.description-popup');
+            if (existingPopup) {
+                existingPopup.remove();
+            }
+
+            if (!description) return;
+
+            const popup = $el("div.description-popup", [
+                $el("button.close-button", {
+                    innerHTML: "×",
+                    onclick: (e) => {
+                        e.stopPropagation();
+                        popup.remove();
+                    }
+                }),
+                $el("div", {
+                    innerHTML: description
+                })
+            ]);
+
+            // Check if the description contains any media elements
+            if (description.includes('<img') || description.includes('<video')) {
+                popup.classList.add('has-media');
+            }
+
+            // Position popup
+            document.body.appendChild(popup);
+            const rect = popup.getBoundingClientRect();
+            
+            // Calculate position
+            let left = event.clientX + 10;
+            let top = event.clientY + 10;
+
+            // Adjust for screen edges
+            if (left + rect.width > window.innerWidth - 20) {
+                left = window.innerWidth - rect.width - 20;
+            }
+            if (top + rect.height > window.innerHeight - 20) {
+                top = window.innerHeight - rect.height - 20;
+            }
+
+            // Ensure minimum left margin
+            left = Math.max(20, left);
+            top = Math.max(20, top);
+
+            popup.style.left = `${left}px`;
+            popup.style.top = `${top}px`;
+
+            // Stop propagation on popup clicks to prevent closing the main info popup
+            popup.addEventListener('click', (e) => {
+                e.stopPropagation();
             });
-            nameContainer.appendChild(versionElement);
+
+            // Handle outside clicks to close the description popup
+            const handleOutsideClick = (e) => {
+                if (!popup.contains(e.target) && !e.target.closest('.description-icon')) {
+                    popup.remove();
+                    document.removeEventListener('click', handleOutsideClick);
+                }
+            };
+
+            // Small delay to prevent immediate closing
+            setTimeout(() => {
+                document.addEventListener('click', handleOutsideClick);
+            }, 100);
+
+            return popup;
+        };
+
+        const createWeightEditor = (lora, contentContainer) => {
+            let weight = lora.reco_weight || 1;
+            let isEditing = false;
+        
+            const createWeightDisplay = () => {
+                const container = $el("div.weight-container", [
+                    $el("h4", { textContent: "Recommended Weight:" })
+                ]);
+        
+                const displayContainer = $el("div.weight-display");
+                
+                const updateDisplay = () => {
+                    // Remove all child elements properly
+                    while (displayContainer.firstChild) {
+                        displayContainer.removeChild(displayContainer.firstChild);
+                    }
+                    
+                    if (isEditing) {
+                        // Show input and save icon
+                        const input = $el("input.weight-input", {
+                            type: "number",
+                            value: weight,
+                            step: "0.1",
+                            min: "-10",
+                            max: "10",
+                            onkeydown: (e) => {
+                                e.stopPropagation(); // Prevent event bubbling
+                                if (e.key === 'Enter') {
+                                    handleSave(e.target.value);
+                                }
+                                if (e.key === 'Escape') {
+                                    isEditing = false;
+                                    updateDisplay();
+                                }
+                            },
+                            onclick: (e) => e.stopPropagation() // Prevent event bubbling
+                        });
+        
+                        const saveIcon = $el("i.weight-save-icon.pi.pi-check", {
+                            onclick: (e) => {
+                                e.stopPropagation(); // Prevent event bubbling
+                                handleSave(input.value);
+                            }
+                        });
+        
+                        displayContainer.appendChild(input);
+                        displayContainer.appendChild(saveIcon);
+                        
+                        // Focus the input
+                        setTimeout(() => input.focus(), 0);
+                    } else {
+                        // Show value and edit icon
+                        const valueSpan = $el("span.weight-value", {
+                            textContent: weight
+                        });
+        
+                        const editIcon = $el("i.weight-edit-icon.pi.pi-pen-to-square", {
+                            onclick: (e) => {
+                                e.stopPropagation(); // Prevent event bubbling
+                                isEditing = true;
+                                updateDisplay();
+                            }
+                        });
+        
+                        displayContainer.appendChild(valueSpan);
+                        displayContainer.appendChild(editIcon);
+                    }
+                };
+        
+                const handleSave = async (newValue) => {
+                    const numValue = parseFloat(newValue);
+                    if (isNaN(numValue) || numValue < -10 || numValue > 10) {
+                        app.ui.dialog.show("Error", "Please enter a valid number between -10 and 10");
+                        return;
+                    }
+                
+                    try {
+                        const response = await api.fetchApi('/lora_sidebar/update_info', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: lora.id,
+                                field: 'reco_weight',
+                                value: numValue
+                            })
+                        });
+                
+                        const result = await response.json();
+                        
+                        if (result.status === 'success') {
+                            // Update local state
+                            lora.reco_weight = numValue;
+                            weight = numValue;
+                            isEditing = false;
+                            updateDisplay();
+                            
+                            // Also update user_edits in local state if it's returned
+                            if (result.user_edits) {
+                                lora.user_edits = result.user_edits;
+                            }
+                            this.showToast("success", "Weight Updated", `Recommended weight updated to ${numValue}`);
+                        } else {
+                            throw new Error(result.message || 'Failed to update weight');
+                        }
+                    } catch (error) {
+                        console.error("Error updating weight:", error);
+                        this.showToast("error", "Update Failed", "Failed to update recommended weight");
+                        
+                        // Revert to previous value in case of error
+                        updateDisplay();
+                    }
+                };
+        
+                container.appendChild(displayContainer);
+                updateDisplay();
+                return container;
+            };
+        
+            const weightDisplay = createWeightDisplay();
+            
+            // Insert weight display after name container but before trained words
+            const trainedWords = contentContainer.querySelector('.trained-words');
+            if (trainedWords) {
+                contentContainer.insertBefore(weightDisplay, trainedWords);
+            } else {
+                contentContainer.appendChild(weightDisplay);
+            }
+        };
+
+        // nameContainer creation
+        const nameContainer = $el("div.name-container");
+
+        // Create a row for name and icon
+        const nameRow = $el("div.name-row", {
+            style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                position: 'relative'  // For positioning the save button
+            }
+        });
+        
+        // Create editable name element
+        const nameElement = $el("h3", { 
+            textContent: lora.name, 
+            className: "lora-name",
+            style: {
+                cursor: 'default'
+            },
+            ondblclick: async (e) => {
+                if (e.target !== nameElement) return;
+        
+                const originalName = lora.name;
+                
+                // Create container for input and save button
+                const editContainer = $el("div", {
+                    style: {
+                        position: 'relative',
+                        width: '100%'
+                    },
+                    onclick: (e) => e.stopPropagation()  // Prevent clicks from reaching the lora info popup
+                });
+        
+                const input = $el("input", {
+                    type: "text",
+                    value: originalName,
+                    style: {
+                        width: '100%',
+                        fontSize: '1rem',         // Default font size
+                        fontWeight: 'normal',     // Normal weight
+                        backgroundColor: '#2a2a2a',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: 'inherit',
+                        padding: '4px 8px',
+                        margin: '0'
+                    },
+                    onkeydown: async (e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Escape') {
+                            nameElement.textContent = originalName;
+                            return;
+                        }
+                        if (e.key === 'Enter') {
+                            await saveName(e.target.value);
+                        }
+                    },
+                    onclick: (e) => e.stopPropagation(),
+                    onmousedown: (e) => e.stopPropagation(),
+                    onmouseup: (e) => e.stopPropagation()
+                });
+        
+                // Create save button
+                const saveButton = $el("div", {
+                    style: {
+                        position: 'absolute',
+                        right: '3px',  // Move slightly inward
+                        top: '100%',
+                        marginTop: '1px',
+                        padding: '1px 3px',  // Much smaller padding
+                        backgroundColor: '#333',  // Dark grey background
+                        borderRadius: '1px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    },
+                    onclick: async (e) => {
+                        e.stopPropagation();
+                        await saveName(input.value);
+                    }
+                }, [
+                    $el("i.pi.pi-check", {
+                        style: {
+                            color: '#4CAF50',  // Green checkmark
+                            fontSize: '0.8em'  // Smaller icon
+                        }
+                    })
+                ]);
+        
+                const saveName = async (newValue) => {
+                    const newName = newValue.trim();
+                    if (newName && newName !== originalName) {
+                        try {
+                            const response = await api.fetchApi('/lora_sidebar/update_info', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    id: lora.id,
+                                    field: 'name',
+                                    value: newName
+                                })
+                            });
+        
+                            if (response.ok) {
+                                lora.name = newName;
+                                nameElement.textContent = newName;
+                                this.showToast("success", "Updated", "Name updated successfully");
+                            } else {
+                                throw new Error('Failed to update name');
+                            }
+                        } catch (error) {
+                            console.error("Error updating name:", error);
+                            nameElement.textContent = originalName;
+                            this.showToast("error", "Update Failed", "Failed to update name");
+                        }
+                    } else {
+                        nameElement.textContent = originalName;
+                    }
+                };
+        
+                // Clear the name element and add our container
+                nameElement.textContent = '';
+                editContainer.appendChild(input);
+                editContainer.appendChild(saveButton);
+                nameElement.appendChild(editContainer);
+                
+                // Focus and select the input
+                input.focus();
+                input.scrollLeft = 0;
+                input.setSelectionRange(0, 0);
+            }
+        });
+        
+        nameRow.appendChild(nameElement);
+        
+        // Add description icon separately
+        if (lora.model_desc) {
+            const descriptionIcon = $el("i.description-icon.pi.pi-info-circle", {
+                onclick: (e) => {
+                    e.stopPropagation();
+                    createDescriptionPopup(lora.model_desc, e);
+                }
+            });
+            nameRow.appendChild(descriptionIcon);
         }
+        
+        nameContainer.appendChild(nameRow);
+
+        // Add label pills container
+        const labelPills = $el("div.label-pills");
+
+        // Add base model pill if available
+        if (lora.baseModel) {
+            labelPills.appendChild(this.createEditablePill('baseModel', lora.baseModel, lora));
+        }
+
+        // Add type pill if available
+        if (lora.type) {
+            labelPills.appendChild(this.createEditablePill('type', lora.type, lora));
+        }
+        
+        // Only append the labels container if we have pills to show
+        if (labelPills.children.length > 0) {
+            nameContainer.appendChild(labelPills);
+        }
+
+        // Add version information in a version container
+        if (lora.versionName || lora.version_desc) {
+            const versionContainer = $el("div.version-info");
+    
+            if (lora.versionName) {
+                const versionElement = $el("p", { 
+                    textContent: `Version: ${lora.versionName}`, 
+                    className: "version-name" 
+                });
+                versionContainer.appendChild(versionElement);
+            }
+            
+            if (lora.version_desc) {
+                // Create a container for the version description
+                const versionDescContainer = $el("div", { 
+                    className: "version-desc-container",
+                    style: {
+                        maxHeight: '200px',  // Limit initial height
+                        overflowY: 'auto',   // Add scroll if content is too long
+                        marginTop: '8px'     // Add some spacing
+                    }
+                });
+        
+                // Create the description element that will hold the HTML content
+                const versionDescElement = $el("div", { 
+                    className: "version-desc",
+                    innerHTML: this.sanitizeHTML(lora.version_desc), // Sanitize and set HTML content
+                    style: {
+                        padding: '4px',
+                        fontSize: '0.9em',
+                        lineHeight: '1.4'
+                    }
+                });
+        
+                // Add expand/collapse functionality if content is long
+                versionDescContainer.appendChild(versionDescElement);
+                
+                // After adding to DOM, check if we need expand/collapse
+                setTimeout(() => {
+                    if (versionDescElement.scrollHeight > 200) {
+                        const expandButton = $el("button", {
+                            className: "expand-desc-button",
+                            textContent: "Show More",
+                            style: {
+                                marginTop: '4px',
+                                padding: '2px 8px',
+                                fontSize: '0.8em',
+                                opacity: '0.8'
+                            },
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                if (versionDescContainer.style.maxHeight === 'none') {
+                                    versionDescContainer.style.maxHeight = '200px';
+                                    expandButton.textContent = "Show More";
+                                } else {
+                                    versionDescContainer.style.maxHeight = 'none';
+                                    expandButton.textContent = "Show Less";
+                                }
+                            }
+                        });
+                        versionContainer.appendChild(expandButton);
+                    }
+                }, 0);
+                
+                versionContainer.appendChild(versionDescContainer);
+            }
+            
+            nameContainer.appendChild(versionContainer);
+        }
+
         contentContainer.appendChild(nameContainer);
 
         // Add subdir information
@@ -1779,60 +2444,17 @@ class LoraSidebar {
             contentContainer.appendChild(subdirElement);
         }
 
-        // Create delete button
-        const deleteButton = $el("button", {
-            className: "delete-button",
-            textContent: "Delete",
-            onclick: (e) => {
-                e.stopPropagation();
-                this.confirmDeleteLora(lora);
-            }
-        });
-        contentContainer.appendChild(deleteButton);
-
-        // Add base model if available
-        if (lora.baseModel) {
-            const baseModelElement = $el("p", { textContent: `Base Model: ${lora.baseModel}`, className: "base-model" });
-            contentContainer.appendChild(baseModelElement);
-        }
+        createWeightEditor(lora, contentContainer);
 
         // Add trained words
-        const trainedWordsElement = $el("div.trained-words", [
-            $el("h4", { textContent: "Trained Words:" }),
-            $el("div.word-pills", 
-                lora.trained_words && lora.trained_words.length > 0 
-                    ? lora.trained_words.map(word => 
-                        $el("span.word-pill", { 
-                            textContent: word,
-                            onclick: () => this.copyToClipboard(word)
-                        })
-                    )
-                    : $el("span", { textContent: "None", className: "no-tags" })
-            ),
-            ...(lora.trained_words && lora.trained_words.length > 0 ? [
-                $el("button.copy-all-button", {
-                    textContent: "Copy All",
-                    onclick: () => this.copyToClipboard(lora.trained_words.join(", "))
-                })
-            ] : [])
-        ]);
-        contentContainer.appendChild(trainedWordsElement);
+        const trainedWordsContainer = $el("div.trained-words");
+        this.createEditableTagSection('trained_words', lora, trainedWordsContainer);
+        contentContainer.appendChild(trainedWordsContainer);
 
         // Add tags
-        const tagsElement = $el("div.tags", [
-            $el("h4", { textContent: "Tags:" }),
-            $el("div.word-pills", 
-                lora.tags && lora.tags.length > 0 
-                    ? lora.tags.map(tag => 
-                        $el("span.word-pill", { 
-                            textContent: tag,
-                            onclick: () => this.copyToClipboard(tag)
-                        })
-                    )
-                    : $el("span", { textContent: "None", className: "no-tags" })
-            )
-        ]);
-        contentContainer.appendChild(tagsElement);
+        const tagsContainer = $el("div.tags");
+        this.createEditableTagSection('tags', lora, tagsContainer);
+        contentContainer.appendChild(tagsContainer);
 
         // Update initial media content
         updateMediaContent(lora);
@@ -1857,6 +2479,92 @@ class LoraSidebar {
             });
             contentContainer.appendChild(nsfwWarning);
         }
+
+        const createButtonRow = () => {
+            const buttonRow = $el("div.button-row");
+        
+            // NSFW Toggle Button
+            const nsfwButton = $el("button", {
+                className: `info-button nsfw-toggle nsfw-${lora.nsfw ? 'true' : 'false'}`,
+                title: "NSFW Flag - Green = False, Red = True",
+                innerHTML: `<i class="pi ${lora.nsfw ? 'pi-flag-fill' : 'pi-flag'}"></i>`,
+                onclick: async (e) => {
+                    e.stopPropagation();
+                    try {
+                        const response = await api.fetchApi('/lora_sidebar/update_info', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: lora.id,
+                                field: 'nsfw',
+                                value: !lora.nsfw
+                            })
+                        });
+            
+                        const result = await response.json();
+                        
+                        if (result.status === 'success') {
+                            lora.nsfw = !lora.nsfw;
+                            nsfwButton.innerHTML = `<i class="pi ${lora.nsfw ? 'pi-flag-fill' : 'pi-flag'}"></i>`;
+                            nsfwButton.className = `info-button nsfw-toggle nsfw-${lora.nsfw ? 'true' : 'false'}`;
+                            
+                            if (result.user_edits) {
+                                lora.user_edits = result.user_edits;
+                            }
+                            
+                            this.showToast("success", "NSFW Flag Updated", `NSFW flag set to ${lora.nsfw}`);
+                        } else {
+                            throw new Error(result.message || 'Failed to update NSFW flag');
+                        }
+                    } catch (error) {
+                        console.error("Error updating NSFW flag:", error);
+                        this.showToast("error", "Update Failed", "Failed to update NSFW flag");
+                    }
+                }
+            });
+            buttonRow.appendChild(nsfwButton);
+        
+            // Upload Image Button
+            const uploadButton = $el("button", {
+                className: "info-button icon-button",
+                title: "Add / Upload Image",
+                innerHTML: '<i class="pi pi-camera"></i>',
+                onclick: (e) => {
+                    e.stopPropagation();
+                    this.createUploadPopup(lora);
+                }
+            });
+            buttonRow.appendChild(uploadButton);
+
+            // File Details Button
+            const fileDetailsButton = $el("button", {
+                className: "info-button icon-button",
+                title: "LoRA File Details",
+                innerHTML: '<i class="pi pi-file"></i>',
+                onclick: (e) => {
+                    e.stopPropagation();
+                    this.showFileDetails(lora);
+                }
+            });
+            buttonRow.appendChild(fileDetailsButton);
+
+            // Delete button
+            const deleteButton = $el("button", {
+                className: "info-button icon-button delete-button",
+                title: "Remove LoRA",
+                innerHTML: '<i class="pi pi-trash"></i>',
+                onclick: (e) => {
+                    e.stopPropagation();
+                    this.confirmDeleteLora(lora);
+                }
+            });
+            buttonRow.appendChild(deleteButton);
+        
+            return buttonRow;
+        };
+        
+        // Add the button row to the content container (no await needed)
+        contentContainer.appendChild(createButtonRow());
     
         // Position the popup
         const sidebar = document.querySelector('.lora-sidebar');
@@ -1901,44 +2609,889 @@ class LoraSidebar {
         });
     }
 
-    confirmDeleteLora(lora) {
-        // Split the path into directory and filename
-        const fullPath = lora.path || "";
-        const directory = fullPath.substring(0, fullPath.lastIndexOf('\\'));
-        const filename = fullPath.substring(fullPath.lastIndexOf('\\') + 1);
+    removePreviousPopups() {
+        const existingPopups = document.querySelectorAll('.confirm-delete-popup');
+        existingPopups.forEach(popup => popup.remove());
+    }
+
+    createEditablePill(pillType, value, lora) {
+        const isModel = pillType === 'baseModel';
+        const field = isModel ? 'baseModel' : 'type';
+        let isEditing = false;
     
-        const confirmPopup = $el("div.confirm-delete-popup", [
-            $el("p", { 
-                textContent: "Are you sure you want to delete the sidebar metadata for this LoRA? This won't remove the LoRA from your hard drive, but you can remove it manually." 
-            }),
-            $el("p", { 
-                className: "file-location-label",
-                textContent: "Folder location:"
-            }),
-            $el("p", { 
-                className: "file-location",
-                textContent: directory || "Path not available"
-            }),
-            $el("p", { 
-                className: "file-location-label",
-                textContent: "File name:"
-            }),
-            $el("p", { 
-                className: "file-location",
-                textContent: filename || "Filename not available"
+        // Get autocomplete suggestions from existing data
+        const getAutocompleteSuggestions = (input) => {
+            const searchTerm = input.toLowerCase();
+            const existingValues = new Set(
+                this.loraData
+                    .map(lora => lora[field])
+                    .filter(Boolean) // Remove null/undefined
+            );
+            return Array.from(existingValues)
+                .filter(val => val.toLowerCase().includes(searchTerm));
+        };
+    
+        const pill = $el("span.label-pill", {
+            className: `label-pill ${isModel ? 'model' : 'type'}`,
+            style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                position: 'relative'
+            }
+        }, [
+            $el("span", { textContent: value }),
+            $el("i.pi.pi-pencil", {
+                style: {
+                    cursor: 'pointer',
+                    fontSize: '0.8em',
+                    opacity: '0.7'
+                },
+                onclick: (e) => {
+                    e.stopPropagation();
+                    if (!isEditing) {
+                        isEditing = true;
+                        showEditInput();
+                    }
+                }
+            })
+        ]);
+    
+        const showEditInput = () => {
+            // Clear the pill content
+            while (pill.firstChild) {
+                pill.removeChild(pill.firstChild);
+            }
+    
+            // Create autocomplete container
+            const autocompleteContainer = $el("div.autocomplete-container", {
+                style: {
+                    position: 'absolute',
+                    top: '100%',
+                    left: '0',
+                    backgroundColor: '#333',
+                    border: '1px solid #444',
+                    borderRadius: '4px',
+                    width: '100%',
+                    maxHeight: '150px',
+                    overflowY: 'auto',
+                    zIndex: '1000',
+                    display: 'none'
+                }
+            });
+    
+            const input = $el("input", {
+                type: "text",
+                value: value,
+                style: {
+                    width: '100px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: 'inherit',
+                    padding: '2px',
+                    fontSize: 'inherit'
+                },
+                oninput: (e) => {
+                    const suggestions = getAutocompleteSuggestions(e.target.value);
+                    updateAutocompleteSuggestions(suggestions);
+                },
+                onkeydown: async (e) => {
+                    if (e.key === 'Escape') {
+                        isEditing = false;
+                        restorePill();
+                        return;
+                    }
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                        e.preventDefault();
+                        try {
+                            const response = await api.fetchApi('/lora_sidebar/update_info', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    id: lora.id,
+                                    field: field,
+                                    value: e.target.value.trim()
+                                })
+                            });
+    
+                            if (response.ok) {
+                                value = e.target.value.trim();
+                                lora[field] = value;
+                                isEditing = false;
+                                restorePill();
+                                this.showToast("success", "Updated", `Updated ${isModel ? 'model' : 'type'}`);
+                            }
+                        } catch (error) {
+                            console.error("Error updating:", error);
+                            this.showToast("error", "Update Failed", "Failed to update");
+                        }
+                    }
+                }
+            });
+    
+            const saveIcon = $el("i.weight-save-icon.pi.pi-check", {
+                style: {
+                    cursor: 'pointer',
+                    marginLeft: '5px'
+                },
+                onclick: () => {
+                    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+                }
+            });
+    
+            const updateAutocompleteSuggestions = (suggestions) => {
+                autocompleteContainer.innerHTML = '';
+                if (suggestions.length > 0) {
+                    suggestions.forEach(suggestion => {
+                        const item = $el("div.autocomplete-item", {
+                            textContent: suggestion,
+                            style: {
+                                padding: '5px 10px',
+                                cursor: 'pointer',
+                                hover: {
+                                    backgroundColor: '#444'
+                                }
+                            },
+                            onclick: () => {
+                                input.value = suggestion;
+                                input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+                            }
+                        });
+                        autocompleteContainer.appendChild(item);
+                    });
+                    autocompleteContainer.style.display = 'block';
+                } else {
+                    autocompleteContainer.style.display = 'none';
+                }
+            };
+    
+            const restorePill = () => {
+                while (pill.firstChild) {
+                    pill.removeChild(pill.firstChild);
+                }
+                pill.appendChild($el("span", { textContent: value }));
+                pill.appendChild($el("i.pi.pi-pencil", {
+                    style: {
+                        cursor: 'pointer',
+                        fontSize: '0.8em',
+                        opacity: '0.7'
+                    },
+                    onclick: (e) => {
+                        e.stopPropagation();
+                        if (!isEditing) {
+                            isEditing = true;
+                            showEditInput();
+                        }
+                    }
+                }));
+            };
+    
+            pill.appendChild(input);
+            pill.appendChild(saveIcon);
+            pill.appendChild(autocompleteContainer);
+            
+            // Focus input after appending
+            setTimeout(() => input.focus(), 0);
+    
+            // Click outside to close autocomplete
+            document.addEventListener('click', (e) => {
+                if (!pill.contains(e.target)) {
+                    autocompleteContainer.style.display = 'none';
+                }
+            });
+        };
+    
+        return pill;
+    }
+
+    createEditableTagSection(type, lora, container) {
+        const isTrainedWords = type === 'trained_words';
+        const title = isTrainedWords ? "Trained Words:" : "Tags:";
+        const items = lora[type] || [];
+        let isEditing = false;
+    
+        const updateSection = (newItems) => {
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+    
+            // Create header with edit/save button
+            const header = $el("div.section-header", {
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '5px'
+                }
+            }, [
+                $el("h4", { textContent: title }),
+                $el("i", {
+                    className: `weight-${isEditing ? 'save' : 'edit'}-icon pi pi-${isEditing ? 'check' : 'pen-to-square'}`,
+                    style: {
+                        cursor: 'pointer',
+                        fontSize: '0.9em'
+                    },
+                    onclick: (e) => {
+                        e.stopPropagation();
+                        isEditing = !isEditing;
+                        updateSection(items);
+                    }
+                })
+            ]);
+            container.appendChild(header);
+    
+            if (isEditing) {
+                // Edit mode
+                const editContainer = $el("div.edit-container", {
+                    style: {
+                        marginBottom: '10px'
+                    }
+                });
+    
+                // Input field with add button
+                const inputGroup = $el("div.input-group", {
+                    style: {
+                        display: 'flex',
+                        gap: '5px',
+                        marginBottom: '10px'
+                    }
+                }, [
+                    $el("input", {
+                        type: "text",
+                        placeholder: `Add new ${isTrainedWords ? 'trigger word' : 'tag'}...`,
+                        onkeydown: async (e) => {
+                            if (e.key === 'Escape') {
+                                isEditing = false;
+                                updateSection(items);
+                                return;
+                            }
+                            if (e.key === 'Enter' && e.target.value.trim()) {
+                                e.preventDefault();
+                                const newItem = e.target.value.trim();
+                                if (!items.includes(newItem)) {
+                                    try {
+                                        const response = await api.fetchApi('/lora_sidebar/update_info', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                id: lora.id,
+                                                field: type,
+                                                value: [...items, newItem]
+                                            })
+                                        });
+    
+                                        if (response.ok) {
+                                            items.push(newItem);
+                                            e.target.value = '';
+                                            updateSection(items);
+                                            this.showToast("success", "Updated", `Added new ${isTrainedWords ? 'trigger word' : 'tag'}`);
+                                        }
+                                    } catch (error) {
+                                        console.error("Error updating:", error);
+                                        this.showToast("error", "Update Failed", "Failed to update");
+                                    }
+                                }
+                            }
+                        }
+                    }),
+                    $el("i.pi.pi-plus", {
+                        style: {
+                            cursor: 'pointer',
+                            padding: '5px',
+                            color: '#4CAF50',
+                            fontSize: '1em'
+                        },
+                        onclick: (e) => {
+                            const input = e.target.previousElementSibling;
+                            if (input.value.trim()) {
+                                input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+                            }
+                        }
+                    })
+                ]);
+                editContainer.appendChild(inputGroup);
+
+                // Add focus after appending
+                setTimeout(() => {
+                    const input = inputGroup.querySelector('input');
+                    if (input) input.focus();
+                }, 0);
+    
+                // Current items with delete buttons
+                const itemsContainer = $el("div.word-pills", {
+                    style: {
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '5px'
+                    }
+                });
+    
+                items.forEach(item => {
+                    const pillContainer = $el("div.pill-container", {
+                        style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                        }
+                    }, [
+                        $el("span.word-pill", { 
+                            textContent: item,
+                            onclick: () => this.copyToClipboard(item)
+                        }),
+                        $el("i.pi.pi-times", {
+                            style: {
+                                cursor: 'pointer',
+                                color: '#ff4444',
+                                fontSize: '0.8em'
+                            },
+                            onclick: async (e) => {
+                                e.stopPropagation();
+                                try {
+                                    const response = await api.fetchApi('/lora_sidebar/update_info', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            id: lora.id,
+                                            field: type,
+                                            value: items.filter(i => i !== item)
+                                        })
+                                    });
+    
+                                    if (response.ok) {
+                                        items.splice(items.indexOf(item), 1);
+                                        updateSection(items);
+                                        this.showToast("success", "Updated", `Removed ${isTrainedWords ? 'trigger word' : 'tag'}`);
+                                    }
+                                } catch (error) {
+                                    console.error("Error updating:", error);
+                                    this.showToast("error", "Update Failed", "Failed to update");
+                                }
+                            }
+                        })
+                    ]);
+                    itemsContainer.appendChild(pillContainer);
+                });
+    
+                editContainer.appendChild(itemsContainer);
+                container.appendChild(editContainer);
+            } else {
+                // Display mode
+                const itemsContainer = $el("div.word-pills", 
+                    items.length > 0 
+                        ? items.map(item => 
+                            $el("span.word-pill", { 
+                                textContent: item,
+                                onclick: () => this.copyToClipboard(item)
+                            })
+                        )
+                        : [$el("span", { textContent: "None", className: "no-tags" })]
+                );
+                container.appendChild(itemsContainer);
+            }
+        };
+    
+        updateSection(items);
+        return container;
+    }
+
+    async handleLastGeneratedImage(lora) {
+        try {
+            // Get the latest temp image info
+            const response = await fetch('/lora_sidebar/latest_temp_image');
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to get latest generated image');
+            }
+            
+            const imageInfo = await response.json();
+            
+            // Use the existing upload endpoint with the URL
+            const uploadResponse = await fetch('/lora_sidebar/upload_images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    lora_id: lora.id,
+                    urls: [imageInfo.url]  // Using the existing URL format
+                })
+            });
+    
+            const result = await uploadResponse.json();
+            
+            if (result.status === 'success') {
+                // Update the lora object with new images
+                lora.images = lora.images || [];
+                lora.images.push(...result.images);
+                
+                // Refresh the info popup if it's open
+                const infoPopup = document.querySelector('.model-info-popup');
+                if (infoPopup) {
+                    this.showLoraInfo(lora, null);
+                }
+                
+                this.showToast("success", "Image Added", "Last generated image added successfully");
+                return true;
+            } else {
+                throw new Error(result.message || 'Failed to add image');
+            }
+        } catch (error) {
+            console.log("Error adding last generated image:", error);
+            this.showToast("error", "Add Failed", error.message || "No generated images found");
+            return false;
+        }
+    }
+
+    async showFileDetails(lora) {
+        this.removePreviousPopups();
+
+        try {
+            const fullPath = lora.path || "";
+            const directory = fullPath.substring(0, fullPath.lastIndexOf('\\'));
+            const filename = fullPath.substring(fullPath.lastIndexOf('\\') + 1);
+            const response = await api.fetchApi(`/lora_sidebar/file_details/${lora.id}`);
+            const result = await response.json();
+    
+            // Helper function to create a label with buttons
+            const createLabelWithCopy = (labelText, contentToCopy, canOpenFolder = false) => {
+                return $el("p.file-location-label", [
+                    $el("span", { textContent: labelText }),
+                    $el("div.action-buttons", {
+                        style: {
+                            marginLeft: "8px",
+                            display: "inline-flex",
+                            gap: "8px"
+                        }
+                    }, [
+                        // Existing copy button
+                        $el("i.pi.pi-clipboard", {
+                            style: {
+                                cursor: "pointer",
+                                fontSize: "0.9em",
+                                opacity: "0.7"
+                            },
+                            onclick: (e) => {
+                                e.stopPropagation();
+                                this.copyToClipboard(contentToCopy);
+                            }
+                        }),
+                        // New folder open button - only show for directory paths
+                        canOpenFolder && $el("i.pi.pi-folder-open", {
+                            style: {
+                                cursor: "pointer",
+                                fontSize: "0.9em",
+                                opacity: "0.7"
+                            },
+                            title: "Open in file browser",
+                            onclick: async (e) => {
+                                e.stopPropagation();
+                                try {
+                                    const response = await fetch('/lora_sidebar/open_folder', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ path: contentToCopy })
+                                    });
+                                    
+                                    if (!response.ok) {
+                                        // Fallback to copy if opening fails
+                                        this.copyToClipboard(contentToCopy);
+                                        this.showToast("info", "Copied Instead", 
+                                            "Couldn't open folder, path copied to clipboard instead.");
+                                    }
+                                } catch (error) {
+                                    // Fallback to copy on error
+                                    this.copyToClipboard(contentToCopy);
+                                    this.showToast("info", "Copied Instead", 
+                                        "Couldn't open folder, path copied to clipboard instead.");
+                                }
+                            }
+                        })
+                    ].filter(Boolean))  // Remove null items (when canOpenFolder is false)
+                ]);
+            };
+        
+            const detailsPopup = $el("div.confirm-delete-popup", {
+                onclick: (e) => e.stopPropagation()
+            }, [
+                $el("h3", {
+                    textContent: "LoRA File Details",
+                    style: {
+                        margin: "0 0 15px 0"
+                    }
+                }),
+                // Source Location
+                createLabelWithCopy("Source Location:", directory, true),
+                $el("p", {
+                    className: "file-location",
+                    textContent: directory || "Path not available"
+                }),
+                
+                // Source File
+                createLabelWithCopy("Source File:", filename),
+                $el("p", {
+                    className: "file-location",
+                    textContent: filename || "Filename not available"
+                }),
+                
+                // Managed Location
+                createLabelWithCopy("Managed Location:", result.managed_dir, true),
+                $el("p", {
+                    className: "file-location",
+                    textContent: result.managed_dir || "Path not available"
+                }),
+        
+                $el("div.confirm-buttons", [
+                    $el("button", {
+                        textContent: "Close",
+                        onclick: (e) => {
+                            e.stopPropagation();
+                            document.body.removeChild(detailsPopup);
+                        }
+                    })
+                ])
+            ]);
+        
+            document.body.appendChild(detailsPopup);
+
+            const handleOutsideClick = (e) => {
+                if (!detailsPopup.contains(e.target)) {
+                    e.stopPropagation();
+                    // Check if popup still exists and is a child of document.body
+                    if (document.body.contains(detailsPopup)) {
+                        document.body.removeChild(detailsPopup);
+                    }
+                    document.removeEventListener('click', handleOutsideClick);
+                }
+            };
+
+            // Small delay to prevent immediate closing
+            setTimeout(() => {
+                document.addEventListener('click', handleOutsideClick);
+            }, 0);
+
+        } catch (error) {
+            console.error("Error fetching file details:", error);
+            this.showToast("error", "Error", "Failed to fetch file details");
+        }
+    }
+
+    confirmDeleteLora(lora) {
+        this.removePreviousPopups();
+
+        const confirmPopup = $el("div.confirm-delete-popup", {
+            onclick: (e) => e.stopPropagation()
+        }, [
+            $el("p", {
+                textContent: "Are you sure you want to delete the sidebar data for this LoRA? This won't remove the LoRA or local data from your hard drive."
             }),
             $el("div.confirm-buttons", [
                 $el("button", {
                     textContent: "Cancel",
-                    onclick: () => document.body.removeChild(confirmPopup)
+                    onclick: (e) => {
+                        e.stopPropagation();
+                        document.body.removeChild(confirmPopup);
+                    }
                 }),
                 $el("button", {
                     textContent: "Delete",
-                    onclick: () => this.deleteLora(lora)
+                    onclick: (e) => {
+                        e.stopPropagation();
+                        this.deleteLora(lora);
+                    }
                 })
             ])
         ]);
         document.body.appendChild(confirmPopup);
+
+        const handleOutsideClick = (e) => {
+            if (!confirmPopup.contains(e.target)) {
+                e.stopPropagation();
+                // Check if popup still exists and is a child of document.body
+                if (document.body.contains(confirmPopup)) {
+                    document.body.removeChild(confirmPopup);
+                }
+                document.removeEventListener('click', handleOutsideClick);
+            }
+        };
+
+        // Small delay to prevent immediate closing
+        setTimeout(() => {
+            document.addEventListener('click', handleOutsideClick);
+        }, 0);
+    }
+
+    createUploadPopup(lora) {
+        // Remove any existing popups
+        this.removePreviousPopups();
+    
+        // Create file input element (hidden)
+        const fileInput = $el("input", {
+            type: "file",
+            multiple: true,
+            accept: "image/*",
+            style: { display: "none" },
+            onchange: (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length > 0) {
+                    filePathInput.value = files.map(f => f.name).join(", ");
+                    // Clear the error message if it exists
+                    const errorMsg = popup.querySelector('.error-message');
+                    if (errorMsg) errorMsg.remove();
+                }
+            }
+        });
+    
+        // Create text input for file path
+        const filePathInput = $el("input", {
+            type: "text",
+            placeholder: "Select images, enter file path, or paste image URL...",
+            className: "file-path-input",
+            style: {
+                width: "100%",
+                padding: "8px",
+                marginBottom: "15px",
+                backgroundColor: "#2a2a2a",
+                border: "1px solid #444",
+                borderRadius: "4px",
+                color: "inherit"
+            }
+        });
+    
+        // Create the popup
+        const popup = $el("div.confirm-delete-popup", {
+            onclick: (e) => e.stopPropagation(),
+            style: {
+                width: "400px",
+                padding: "20px"
+            }
+        }, [
+            $el("h3", { 
+                textContent: "Add Images",
+                style: { 
+                    marginTop: "0",
+                    marginBottom: "15px",
+                    textAlign: "center" 
+                }
+            }),
+            $el("p", { 
+                textContent: "Select one or more local images to add to the carousel. You can also paste an image URL.",
+                style: { 
+                    marginBottom: "15px",
+                    textAlign: "center",
+                    color: "#999",
+                    fontSize: "0.9em"
+                }
+            }),
+            filePathInput,
+            // Action buttons container
+            $el("div.action-buttons", {
+                style: {
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "20px"
+                }
+            }, [
+                $el("button", {
+                    textContent: "Browse Files...",
+                    className: "confirm-button",
+                    style: {
+                        minWidth: "200px"
+                    },
+                    onclick: () => fileInput.click()
+                }),
+                $el("button", {
+                    className: "confirm-button",
+                    style: {
+                        minWidth: "200px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        height: "32px",  // Match confirm button height
+                        borderRadius: "6px",  // More rounded
+                    },
+                    onclick: async (e) => {
+                        e.stopPropagation();
+                        const button = e.target.closest('button');  // Get the button element even if icon was clicked
+                        const originalHtml = button.innerHTML;
+                        
+                        button.disabled = true;
+                        button.textContent = "Adding...";
+                        
+                        try {
+                            const success = await this.handleLastGeneratedImage(lora);
+                            if (success) {
+                                popup.remove();
+                            }
+                        } finally {
+                            button.disabled = false;
+                            button.innerHTML = originalHtml;
+                        }
+                    }
+                }, [
+                    $el("i.pi.pi-microchip-ai", {
+                        style: {
+                            fontSize: "16px"  // Adjust icon size as needed
+                        }
+                    }),
+                    $el("span", { textContent: "Add Last Generated Image" })
+                ])
+            ]),
+            // Confirm/Cancel buttons at bottom
+            $el("div.confirm-buttons", {
+                style: {
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: "10px"
+                }
+            }, [
+                $el("button", {
+                    textContent: "Cancel",
+                    onclick: () => popup.remove(),
+                    style: {
+                        minWidth: "100px" // Consistent width for bottom buttons
+                    }
+                }),
+                $el("button", {
+                    textContent: "Upload",
+                    onclick: async () => {
+                        const files = fileInput.files;
+                        const inputText = filePathInput.value.trim();
+    
+                        // Check for URLs
+                        if (inputText && !files?.length) {
+                            const urls = inputText.split(/[\n,]/).map(url => url.trim()).filter(url => url);
+                            const validUrls = urls.filter(url => isValidUrl(url));
+    
+                            if (validUrls.length === 0) {
+                                showError("Please enter valid image URLs or select local files");
+                                return;
+                            }
+    
+                            try {
+                                const response = await fetch('/lora_sidebar/upload_images', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        lora_id: lora.id,
+                                        urls: validUrls
+                                    })
+                                });
+    
+                                const result = await response.json();
+                                
+                                if (result.status === 'success') {
+                                    handleUploadSuccess(result);
+                                } else {
+                                    throw new Error(result.message || 'Upload failed');
+                                }
+                            } catch (error) {
+                                console.error("Error uploading URLs:", error);
+                                this.showToast("error", "Upload Failed", error.message);
+                            } finally {
+                                popup.remove();
+                            }
+                            return;
+                        }
+    
+                        // Handle local files
+                        if (!files || files.length === 0) {
+                            showError("Please select at least one image or enter valid URLs");
+                            return;
+                        }
+    
+                        const formData = new FormData();
+                        formData.append('lora_id', lora.id);
+                        
+                        for (const file of files) {
+                            formData.append('files[]', file);
+                        }
+    
+                        try {
+                            const response = await fetch('/lora_sidebar/upload_images', {
+                                method: 'POST',
+                                body: formData
+                            });
+    
+                            const result = await response.json();
+                            
+                            if (result.status === 'success') {
+                                handleUploadSuccess(result);
+                            } else {
+                                throw new Error(result.message || 'Upload failed');
+                            }
+                        } catch (error) {
+                            console.error("Error uploading files:", error);
+                            this.showToast("error", "Upload Failed", error.message);
+                        } finally {
+                            popup.remove();
+                        }
+                    },
+                    style: {
+                        minWidth: "100px"
+                    }
+                })
+            ])
+        ]);
+    
+        const showError = (message) => {
+            // Remove existing error message if any
+            const existingError = popup.querySelector('.error-message');
+            if (existingError) existingError.remove();
+    
+            // Add new error message
+            const errorMsg = $el("p.error-message", {
+                textContent: message,
+                style: {
+                    color: "#ff4444",
+                    marginTop: "5px",
+                    fontSize: "0.9em",
+                    textAlign: "center"
+                }
+            });
+            popup.insertBefore(errorMsg, popup.querySelector('.confirm-buttons'));
+        };
+    
+        const handleUploadSuccess = (result) => {
+            lora.images = lora.images || [];
+            lora.images.push(...result.images);
+            
+            const infoPopup = document.querySelector('.model-info-popup');
+            if (infoPopup) {
+                this.showLoraInfo(lora, null);
+            }
+            
+            this.showToast("success", "Upload Complete", result.message);
+        };
+
+        // outside click handler
+        const handleOutsideClick = (e) => {
+            if (!popup.contains(e.target)) {
+                e.stopPropagation();
+                if (document.body.contains(popup)) {
+                    document.body.removeChild(popup);
+                }
+                document.removeEventListener('click', handleOutsideClick);
+            }
+        };
+    
+        document.body.appendChild(popup);
+
+        // Small delay to prevent immediate closing
+        setTimeout(() => {
+            document.addEventListener('click', handleOutsideClick);
+        }, 0);
+
+        fileInput.addEventListener('change', () => {
+            const files = fileInput.files;
+            if (files.length > 0) {
+                filePathInput.value = Array.from(files).map(f => f.name).join(", ");
+            }
+        });
     }
 
     async deleteLora(lora) {
@@ -2050,6 +3603,14 @@ class LoraSidebar {
         this.favState = newVal;
     }
 
+    updateA1111Style(newVal) {
+        this.a1111Style = newVal;
+    }
+
+    updateUseRG3(newVal) {
+        this.UseRG3 = newVal;
+    }
+
     ////////
 
     async update() {
@@ -2139,6 +3700,45 @@ app.registerExtension({
             onChange: (newVal, oldVal) => {
                 if (app.loraSidebar && oldVal !== undefined) {
                     app.loraSidebar.updateFavState(newVal);
+                }
+            }
+        });
+
+/*         app.ui.settings.addSetting({
+            id: "LoRA Sidebar.General.infoPersist",
+            name: "Keep LoRA Info Open",
+            tooltip : 'Keeps the LoRA Info Window Open Unless Manually Closed',
+            type: "boolean",
+            defaultValue: false,
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.updateInfoPersist(newVal);
+                }
+            }
+        }); */
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.General.a1111Style",
+            name: "Use A1111 Lora Prompting",
+            tooltip : 'If enabled, will add LoRA and Weight before trained words on drag and drop onto prompt nodes',
+            type: "boolean",
+            defaultValue: false,
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.updateA1111Style(newVal);
+                }
+            }
+        });
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.General.useRG3",
+            name: "Use rgthree Nodes",
+            tooltip : 'Creates a Lora Power Loader Node on drag and drop vs a core node',
+            type: "boolean",
+            defaultValue: false,
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.updateUseRG3(newVal);
                 }
             }
         });
@@ -2237,5 +3837,18 @@ app.registerExtension({
                 }
             }
         });
+
+/*         app.ui.settings.addSetting({
+            id: "LoRA Sidebar.NSFW.nsfwFolder",
+            name: "Use NSFW Folder",
+            tooltip : 'Enabled this will flag every LoRA within a NSFW folder (and its subfolders) as NSFW, does not apply to already processed LoRAs',
+            type: "boolean",
+            defaultValue: true,
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.updateNSFWfolder(newVal);
+                }
+            }
+        }); */
     },
 });
