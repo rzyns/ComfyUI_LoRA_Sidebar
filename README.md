@@ -1,11 +1,19 @@
 # ComfyUI_LoRA_Sidebar
-### Now supports CivitAI.info, Stability Matrix, and RG Three data!
+### Big Update for Custom LoRA Users!
 ## What is this?
 A custom front-end UX node that creates a visual library of all your LoRAs. It's designed to be fast, slim, and make using LoRAs in Comfy a lot more fun for visual users - especially if you have lots of LoRAs. Should make people used to A1111 and other UI heavy platforms feel more at home. If you've got lots of LoRAs, this sidebar could be your new best friend!
 
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
 ## Updates
+#### 10/31/24
+- Happy Spooky Day, what better way to celebrate than with a big update!
+- Massive update to the LoRA Info Pop-up, including the ability to edit almost all fields directly from the pop-up, perfect for Custom LoRA users
+- Easily add new images to the LoRA via the pop-up, change the preview image, and get access to folders and files
+- Added support for RGThree Power Lora Loader nodes, supported with all drag and drop funtions
+- Added support for A1111 LoRA prompt tags, if you have a node that supports it you can just drag and drop into your prompt node
+- Fixes and enchanced all local data and image processing, big improvement here for custom LoRAs again
+- Lots of small big fixes and tweaks
 #### 10/27/24
 - More external data changes, expanded support to both Stability Matrix data files as well as rgthree metadata. Reduced external calls on processing even more so should be even faster, loading additional data on demand in background. I don't plan to add anymore metadata support at this time, so this should be the last major data support change for a while
 - Custom images now can be easily added to any LoRA Info window by just placing the images in the LoRA's base directory (where the preview.jpg and info.json live) - this also makes setting them as the thumbnail super easy
