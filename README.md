@@ -5,7 +5,7 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
-## Newest Updates
+## Updates
 #### 10/31/24
 - Happy Spooky Day, what better way to celebrate than with a big update!
 - Massive update to the LoRA Info Pop-up, including the ability to edit almost all fields directly from the pop-up, perfect for Custom LoRA users
