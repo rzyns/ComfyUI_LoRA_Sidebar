@@ -5,39 +5,27 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
-## Updates
+## Newest Updates
 #### 10/31/24
 - Happy Spooky Day, what better way to celebrate than with a big update!
 - Massive update to the LoRA Info Pop-up, including the ability to edit almost all fields directly from the pop-up, perfect for Custom LoRA users
 - Easily add new images to the LoRA via the pop-up, change the preview image, and get access to folders and files
-- Added support for RGThree Power Lora Loader nodes, supported with all drag and drop funtions
+- Added support for rgthree Power Lora Loader nodes, supported with all drag and drop funtions
 - Added support for A1111 LoRA prompt tags, if you have a node that supports it you can just drag and drop into your prompt node
 - Fixes and enchanced all local data and image processing, big improvement here for custom LoRAs again
 - Lots of small big fixes and tweaks
-#### 10/27/24
-- More external data changes, expanded support to both Stability Matrix data files as well as rgthree metadata. Reduced external calls on processing even more so should be even faster, loading additional data on demand in background. I don't plan to add anymore metadata support at this time, so this should be the last major data support change for a while
-- Custom images now can be easily added to any LoRA Info window by just placing the images in the LoRA's base directory (where the preview.jpg and info.json live) - this also makes setting them as the thumbnail super easy
-- Can now replace the default LoRA thumbail via the LoRA Info popup
-- Enhanced LoRA Info popup image handling, added hi-rez pop out
-- Added Favorites category override to keep it expanded even if you have categories minimized (Nice QoL buff for those with large datasets)
-- Now properly detects symlink directories in default and custom lora paths, why do you people do this to me (I'm so over symlinks 😝)
-- Fixed some bugs / text
-#### 10/25/24
-- Now supports using existing data and images that follow the civitai.info format, this reduces duplication and also greatly speeds up processing of LoRAs that have it
-- Fixed a bug with the way subdirs were calculated, now drag and drop should be much more reliable
-- Added detection for old data files and reprocessing logic, I won't change this unless I have to, but being able to check it is important (cause I changed it this time 😛)
-- Overhaul of stored data to lay groundwork for future updates
-- Can now search for "lycoris" in the search box to quickly find all your lycos 🥳
 
 ## Features
 - Sidebar that automatically generates a visual library of all your LoRA models
+ - Sidebar will look for and use any existing local data, making importing super fast if you've used other plugins to download metadata previously. Supports civitai.json, stability matrix and rgthree currently
 - Designed to be super fast for searches
+ - Search across all aspects of LoRAs, types, tags, names, description, etc.
 - Easily filter LoRAs by base model (and any search term, obviously)
 - View LoRA details via LoRA Info popup, includes important model info and has easy to copy trained words and tags
 - Drag and drop LoRAs to create or update LoRA nodes on the canvas
   - Drag and drop images from the LoRA Info popup to load entire workflows (if metadata exists)
 - Categorize and sort your LoRAs in multiple ways such as folder structure and automatic or custom tags
-- Works with custom LoRAs - see usage notes below
+- Works with custom LoRAs - Allows easy editing of LoRA details
 - Provides NSFW protection for all those LoRAs that you don't remember downloading 😁
 - Battle tested with very large (9000+ models) LoRA libraries
 - Supports symlinks!
@@ -95,11 +83,12 @@ This plugin has a host of settings to customize the appearence and sorting. Sett
 - There's no additional python requirements since it's just a frontend UI.
 
 ## Roadmap
-- [ ] Adding support for more LoRA nodes outside of ComfyUI Core - just open an issue for me to add them
 - [ ] Custom category sorting
 - [ ] Look into fixing timeouts with large datasets so the server logs don't get spammed
 - [ ] Investigate some ways to improve performance when using categories
 - [ ] Whatever bugs you find / features you submit
+- [X] Adding support for more LoRA nodes outside of ComfyUI Core - (rgthree for now)
+- [X] Support A1111 style LoRA promopting
 - [X] Support searching by model type (LoRA or Lycoris)
 - [X] Support external data to speed up processing and reduce duplication
 - [X] Fix LoRA processor from grabbing hidden system files
