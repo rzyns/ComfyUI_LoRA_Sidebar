@@ -1,11 +1,19 @@
 # ComfyUI_LoRA_Sidebar
-### Big Update for Custom LoRA Users!
+### Now Supports SD 3.5 and Illustrios LoRAs!
 ## What is this?
 A custom front-end UX node that creates a visual library of all your LoRAs. It's designed to be fast, slim, and make using LoRAs in Comfy a lot more fun for visual users - especially if you have lots of LoRAs. Should make people used to A1111 and other UI heavy platforms feel more at home. If you've got lots of LoRAs, this sidebar could be your new best friend!
 
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
 ## Updates
+#### 11/02/24
+- Added Support for SD 3.5 and Illustrious LoRAs
+- Improved LoRA Info Pop Up UX
+- Added new sorting options
+- New option to use NSFW folder structure
+- Improved processing and refresh logic
+- Now supports local saved sha256 hashes
+- Lots of small big fixes and tweaks
 #### 10/31/24
 - Happy Spooky Day, what better way to celebrate than with a big update!
 - Massive update to the LoRA Info Pop-up, including the ability to edit almost all fields directly from the pop-up, perfect for Custom LoRA users
