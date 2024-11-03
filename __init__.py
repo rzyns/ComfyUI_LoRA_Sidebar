@@ -15,6 +15,7 @@ from collections import Counter
 import logging
 import glob
 import subprocess
+from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
 
@@ -105,7 +106,101 @@ class RateLimiter:
 # Initialize the RateLimiter
 RATE_LIMITER = RateLimiter(MAX_REQUESTS_PER_MINUTE, 60)  # 120 calls per 60 seconds
 
+async def get_lora_sort_metadata():
+    """
+    Gets both dates and names for all LoRA info.json files.
+    Returns a dictionary mapping lora_id to {
+        'ctime': timestamp, 
+        'mtime': timestamp,
+        'name': display_name
+    }
+    """
+    sort_metadata = {}
+    for folder in os.listdir(LORA_DATA_DIR):
+        info_path = os.path.join(LORA_DATA_DIR, folder, "info.json")
+        try:
+            if os.path.isfile(info_path):
+                stats = os.stat(info_path)
+                # Get the base info
+                sort_metadata[folder] = {
+                    'ctime': stats.st_ctime,
+                    'mtime': stats.st_mtime,
+                    'name': folder  # Default fallback
+                }
+                
+                # Read the name from info.json
+                try:
+                    with open(info_path, 'r', encoding='utf-8') as f:
+                        json_data = json.load(f)
+                        sort_metadata[folder]['name'] = json_data.get('name', folder)
+                except json.JSONDecodeError:
+                    logger.error(f"Error reading info.json for {folder}")
+                    
+        except (OSError, IOError) as e:
+            logger.error(f"Error getting info for {folder}: {str(e)}")
+            continue
+    return sort_metadata
+
+def sort_loras(loras, sort_by='alpha', sort_metadata=None, favorites=None, ascending=True):
+    """
+    Sorts a list of LoRA folders by specified criteria.
+    
+    Args:
+        loras: List of folder names to sort
+        sort_by: 'alpha' or 'date'
+        sort_metadata: Dictionary from get_lora_sort_metadata()
+        favorites: Optional list of favorite LoRA IDs to prioritize
+        ascending: If True, sort A-Z or oldest first. If False, Z-A or newest first.
+    
+    Returns:
+        List of sorted folder names
+    """
+    sort_metadata = sort_metadata or {}  # Ensure sort_metadata is at least an empty dict
+    
+    # Helper function to get sort key for dates
+    def get_date_key(lora_id):
+        if not sort_metadata:
+            return 0
+        lora_meta = sort_metadata.get(lora_id, {})
+        return lora_meta.get('ctime', 0)
+    
+    # Helper function to get sort key for alphabetical
+    def get_alpha_key(lora_id):
+        if not sort_metadata:
+            return lora_id.lower()
+        lora_meta = sort_metadata.get(lora_id, {})
+        return lora_meta.get('name', lora_id).lower()
+    
+    # Choose sort key function based on sort_by
+    sort_key = get_alpha_key if sort_by == 'alpha' else get_date_key
+    
+    # Split into favorites and non-favorites
+    if favorites:
+        fav_loras = [l for l in loras if l in favorites]
+        non_fav_loras = [l for l in loras if l not in favorites]
+        
+        # Sort each group
+        sorted_favs = sorted(fav_loras, key=sort_key, reverse=not ascending)
+        sorted_non_favs = sorted(non_fav_loras, key=sort_key, reverse=not ascending)
+        
+        return sorted_favs + sorted_non_favs
+    else:
+        return sorted(loras, key=sort_key, reverse=not ascending)
+
 async def hash_file(filepath):
+    # Check for local saved hash
+    stripped_file_path = os.path.splitext(filepath)[0]
+    hash_path = stripped_file_path + ".sha256"
+    
+    # If local hash file exists, read it
+    if os.path.isfile(hash_path):
+        try:
+            with open(hash_path, "rt") as f:
+                return f.read().strip()
+        except Exception as e:
+            logger.warning(f"Error reading hash file {hash_path}: {str(e)}")
+
+    # Nothing local, so let's hash it ourselves
     sha256_hash = hashlib.sha256()
     with open(filepath, "rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):
@@ -138,6 +233,8 @@ async def check_local_info(file_path):
                 "baseModel": metadata.get("baseModel"),
                 "description": metadata.get("description"),  # Version description
                 "images": metadata.get("images", []),
+                "createdAt": metadata.get("createdAt"),  # Match API format
+                "updatedAt": metadata.get("updatedAt"),  # Match API format
                 "local_metadata": True,  # Add flag
                 "has_local_images": True
             }
@@ -169,6 +266,8 @@ async def check_local_info(file_path):
                 "baseModel": metadata.get("BaseModel"),
                 "description": metadata.get("VersionDescription"),
                 "images": [],
+                "createdAt": metadata.get("ImportedAt"), #all we have is imported date here so using it for both
+                "updatedAt": metadata.get("ImportedAt"),
                 "local_metadata": True,
                 "has_local_images": True
             }
@@ -209,6 +308,8 @@ async def check_local_info(file_path):
                     }
                     for img in civitai.get("images", [])
                 ],
+                "createdAt": civitai.get("createdAt"),
+                "updatedAt": civitai.get("updatedAt"),
                 "local_metadata": True,
                 "has_local_images": False
             }
@@ -235,9 +336,20 @@ async def fetch_model_info(session, model_id):
 async def fetch_version_info(session, file_hash):
     url = f"https://civitai.com/api/v1/model-versions/by-hash/{file_hash}"
     await RATE_LIMITER.acquire()  # Enforce rate limit
-    async with session.get(url) as response:
-        if response.status == 200:
-            return await response.json()
+    
+    try:
+        async with session.get(url) as response:
+            if response.status == 200:
+                return await response.json()
+            elif response.status == 404:
+                # Expected response for custom LoRAs and removed content
+                logger.info(f"Hash lookup failed for {file_hash}, likely a custom LoRA or removed content. Falling back to local data.")
+            else:
+                # Unexpected API response
+                logger.warning(f"Unexpected response from CivitAI API: {response.status}")
+    except Exception as e:
+        logger.warning(f"Error during hash lookup: {str(e)}")
+    
     return None
 
 async def fetch_version_info_by_id(session, version_id):
@@ -259,6 +371,43 @@ async def download_image(session, image_url, save_path):
                 f.write(await response.read())
             return os.path.basename(final_save_path)
     return None
+
+def format_date(date_input):
+    """
+    Convert any reasonable date format to YYYY-MM-DD.
+    Returns 'unknown' for invalid/missing dates.
+    
+    Handles:
+    - ISO 8601 timestamps (2024-10-24T12:14:32.925Z)
+    - Simple dates (2024-10-24)
+    - Unix timestamps
+    """
+    if not date_input:
+        return "unknown"
+        
+    try:
+        # If it's already a datetime object
+        if isinstance(date_input, datetime):
+            dt = date_input
+        # If it's a string, try parsing it
+        elif isinstance(date_input, str):
+            # Try ISO format first (handles both full timestamps and simple dates)
+            try:
+                dt = datetime.fromisoformat(date_input.replace('Z', '+00:00'))
+            except ValueError:
+                # If that fails, try basic date format
+                dt = datetime.strptime(date_input, '%Y-%m-%d')
+        # If it's a number (timestamp)
+        elif isinstance(date_input, (int, float)):
+            dt = datetime.fromtimestamp(date_input)
+        else:
+            return "unknown"
+            
+        return dt.strftime('%Y-%m-%d')
+        
+    except Exception as e:
+        logger.error(f"Error formatting date {date_input}: {str(e)}")
+        return "unknown"
 
 async def copy_placeholder_as_preview(lora_id):
     placeholder_path = os.path.join(LORA_DATA_DIR, "placeholder.jpeg")
@@ -441,6 +590,40 @@ def find_custom_images(base_path, base_filename):
     
     logger.info(f"Found total of {len(custom_images)} custom images")
     return custom_images
+
+def validate_processed_loras(processed_loras):
+    """Validate and clean processed_loras data, keeping newest paths"""
+    # Ensure we have required structure
+    if not isinstance(processed_loras, dict):
+        return {
+            "version": PROCESSED_LORAS_VERSION,
+            "loras": [],
+            "favorites": []
+        }
+    
+    # Ensure required keys exist
+    processed_loras.setdefault("version", PROCESSED_LORAS_VERSION)
+    processed_loras.setdefault("loras", [])
+    processed_loras.setdefault("favorites", [])
+    
+    # Check for duplicates - keep entry with newest path
+    entries_by_filename = {}
+    for lora in processed_loras["loras"]:
+        filename = lora.get("filename")
+        if filename:
+            # If we've seen this filename before, keep the newer path
+            if filename in entries_by_filename:
+                # Check if this path is different from what we have
+                if lora.get("path") != entries_by_filename[filename].get("path"):
+                    # Update to the new path
+                    entries_by_filename[filename]["path"] = lora.get("path")
+                    logger.info(f"Updated path for {filename} to: {lora.get('path')}")
+            else:
+                entries_by_filename[filename] = lora
+    
+    # Convert back to list, now with unique entries and newest paths
+    processed_loras["loras"] = list(entries_by_filename.values())
+    return processed_loras
 
 @PromptServer.instance.routes.get("/lora_sidebar/loras/list")
 async def list_loras(request):
@@ -857,24 +1040,26 @@ async def process_loras(request):
                         new_subdir = get_subdir(new_path)
                         path_updated = False
                         
-                        # Check if the LoRA exists in processed_loras.json
-                        existing_entry = next((item for item in processed_loras["loras"] 
-                                            if item.get("filename") == base_filename), None)
-                        
-                        # Update processed_loras.json if needed
-                        if existing_entry is None:
-                            processed_loras["loras"].append({
-                                "filename": base_filename,
-                                "path": new_path
-                            })
-                            path_updated = True
-                        elif existing_entry.get("path") != new_path:
-                            existing_entry["path"] = new_path
-                            path_updated = True
+                        try:
+                            # Check if the LoRA exists in processed_loras.json
+                            existing_entry = next((item for item in processed_loras["loras"] 
+                                                if item.get("filename") == base_filename), None)
+                            
+                            # Update processed_loras.json if needed
+                            if existing_entry is None:
+                                processed_loras["loras"].append({
+                                    "filename": base_filename,
+                                    "path": new_path
+                                })
+                                path_updated = True
+                                logger.info(f"Added new entry for moved LoRA {base_filename}: {new_path}")
+                            elif existing_entry.get("path") != new_path:
+                                existing_entry["path"] = new_path
+                                path_updated = True
+                                logger.info(f"Updated path for moved LoRA {base_filename}: {new_path}")
 
-                        # If the path was updated, also update info.json
-                        if path_updated:
-                            try:
+                            # If the path was updated, also update info.json
+                            if path_updated:
                                 # Read current info.json
                                 with open(info_json_path, "r", encoding="utf-8") as f:
                                     info_data = json.load(f)
@@ -883,45 +1068,50 @@ async def process_loras(request):
                                 
                                 # Check if we need to update metadata source
                                 if info_data.get("local_metadata"):
-                                    # Check if .civitai.info still exists at new location
                                     new_civitai_info = f"{os.path.splitext(new_path)[0]}.civitai.info"
                                     if not os.path.exists(new_civitai_info):
-                                        # External metadata no longer available, switch to internal
                                         info_data["local_metadata"] = False
                                         needs_update = True
-                                        needs_reprocess = True  # Force reprocess if we lost local metadata
-                                        logger.info(f"External metadata not found at new location for {filename}, switching to internal")
+                                        needs_reprocess = True
+                                        logger.info(f"External metadata not found at new location for {base_filename}, switching to internal")
                                 
                                 # Update path and subdir if needed
                                 if info_data.get("path") != new_path or info_data.get("subdir") != new_subdir:
                                     info_data["path"] = new_path
                                     info_data["subdir"] = new_subdir
                                     needs_update = True
+                                    logger.info(f"Updated path/subdir in info.json for {base_filename}")
                                 
                                 # Write updates if needed
                                 if needs_update:
                                     with open(info_json_path, "w", encoding="utf-8") as f:
                                         json.dump(info_data, f, indent=4)
-                                        logger.info(f"Updated info.json for moved LoRA: {filename}")
+                                        logger.info(f"Saved updated info.json for moved LoRA: {base_filename}")
 
-                                # Update processed_loras.json
-                                existing_data = {
-                                    "version": PROCESSED_LORAS_VERSION,
-                                    "loras": [],
-                                    "favorites": []
-                                }
+                                # Save processed_loras.json immediately after updating
                                 if os.path.exists(processed_loras_file):
                                     with open(processed_loras_file, "r", encoding="utf-8") as f:
                                         existing_data = json.load(f)
-                                
-                                existing_data["loras"] = processed_loras["loras"]
-                                
-                                with open(processed_loras_file, 'w', encoding="utf-8") as f:
-                                    json.dump(existing_data, f, indent=4, ensure_ascii=False)
+                                    
+                                    # Update the specific entry in existing_data
+                                    existing_lora = next((item for item in existing_data["loras"] 
+                                                    if item.get("filename") == base_filename), None)
+                                    if existing_lora:
+                                        existing_lora["path"] = new_path
+                                    else:
+                                        existing_data["loras"].append({
+                                            "filename": base_filename,
+                                            "path": new_path
+                                        })
+                                    
+                                    existing_data = validate_processed_loras(existing_data)
+                                    with open(processed_loras_file, 'w', encoding="utf-8") as f:
+                                        json.dump(existing_data, f, indent=4, ensure_ascii=False)
+                                    logger.info(f"Updated processed_loras.json for {base_filename}")
                                 
                                 # Handle move completion
-                                if filename in moved_loras:
-                                    moved_loras.remove(filename)
+                                if base_filename in moved_loras:
+                                    moved_loras.remove(base_filename)
                                     processed_count += 1
                                     progress = int(((processed_count + skipped_count) / total_count) * 100)
                                     await PromptServer.instance.send_json("lora_process_progress", {
@@ -929,10 +1119,11 @@ async def process_loras(request):
                                         "completed": processed_count + skipped_count,
                                         "total": total_count
                                     })
-                                
-                            except Exception as e:
-                                logger.error(f"Error updating info for moved LoRA {filename}: {str(e)}")
-                                needs_reprocess = True  # Force reprocess if we had an error
+                                    logger.info(f"Completed move processing for {base_filename}")
+                            
+                        except Exception as e:
+                            logger.error(f"Error updating info for moved LoRA {base_filename}: {str(e)}")
+                            needs_reprocess = True  # Force reprocess if we had an error
                     
                     # Only skip if we don't need to reprocess and haven't moved
                     if not needs_reprocess:
@@ -993,6 +1184,8 @@ async def process_loras(request):
                             "reco_weight": 1,
                             "model_desc": version_info.get('model', {}).get('description'),
                             "type": version_info.get('model', {}).get('type'),
+                            "createdDate": format_date(version_info.get('createdAt')),
+                            "updatedDate": format_date(version_info.get('updatedAt')),
                             "subdir": subdir,
                             "path": file_path,
                             "local_metadata": has_local_metadata,
@@ -1098,6 +1291,8 @@ async def process_loras(request):
                             "reco_weight": 1,
                             "model_desc": None,
                             "type": None,
+                            "createdDate": datetime.now().strftime('%Y-%m-%d'),
+                            "updatedDate": datetime.now().strftime('%Y-%m-%d'),
                             "subdir": subdir,
                             "path": file_path,
                             "local_metadata": True,
@@ -1140,6 +1335,7 @@ async def process_loras(request):
                         "filename": base_filename,
                         "path": file_path  # Include the path here
                     })
+                    processed_loras = validate_processed_loras(processed_loras)
                     with open(processed_loras_file, 'w', encoding="utf-8") as f:
                         json.dump(processed_loras, f, indent=4, ensure_ascii=False)
                 
@@ -1220,12 +1416,19 @@ async def get_lora_data(request):
     # Get offset and limit from query parameters
     offset = int(request.query.get('offset', 0))
     limit = int(request.query.get('limit', 500))  # Default to 500 if not provided
+    sort_by = request.query.get('sort', 'alpha')  # sorting type
+    ascending = request.query.get('ascending', 'true').lower() == 'true'
+    nsfw_folder = request.query.get('nsfw_folder', 'false').lower() == 'true'
+
+    # Get all folders first
+    all_folders = [folder for folder in os.listdir(LORA_DATA_DIR) 
+                   if os.path.isdir(os.path.join(LORA_DATA_DIR, folder))]
     
     lora_data = []
-    processed_loras_file = os.path.join(LORA_DATA_DIR, "processed_loras.json")
    
     # Load favorites
     favorites = []
+    processed_loras_file = os.path.join(LORA_DATA_DIR, "processed_loras.json")
     if os.path.exists(processed_loras_file):
         with open(processed_loras_file, "r", encoding="utf-8") as f:
             try:
@@ -1233,11 +1436,12 @@ async def get_lora_data(request):
                 favorites = processed_loras.get('favorites', [])
             except json.JSONDecodeError:
                 logger.error("Error reading processed_loras.json.")
-                favorites = []
     
-    # List all folders in the LoRA data directory
-    all_folders = [folder for folder in os.listdir(LORA_DATA_DIR) 
-                   if os.path.isdir(os.path.join(LORA_DATA_DIR, folder))]
+    # Get metadata for sorting
+    sort_metadata = await get_lora_sort_metadata() if sort_by in ['alpha', 'date'] else None
+    
+    # Sort the folders
+    all_folders = sort_loras(all_folders, sort_by, sort_metadata, favorites, ascending)
 
     # Ensure favorites are prioritized only in the first batch
     favorite_folders = []
@@ -1257,6 +1461,7 @@ async def get_lora_data(request):
         folders_to_process = non_favorite_folders[offset - len(favorite_folders):offset + limit - len(favorite_folders)]
 
     # Fetch data for the selected folders
+    lora_data = []
     processed_ids = set()
     for folder in folders_to_process:
         if folder not in processed_ids:
@@ -1265,14 +1470,33 @@ async def get_lora_data(request):
                 with open(info_file, "r", encoding="utf-8") as f:
                     try:
                         data = json.load(f)
-                        data['id'] = folder  # Add the folder name as 'id'
+                        data['id'] = folder
 
-                        # Get the filename and path from LORA_FILE_INFO
+                        # Add the is_new flag
+                        if sort_metadata and folder in sort_metadata:
+                            created_time = sort_metadata[folder]['ctime']
+                            # Get today and yesterday at midnight
+                            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                            yesterday = today - timedelta(days=1)
+                            # Convert timestamp to datetime
+                            created_date = datetime.fromtimestamp(created_time)
+                            data['is_new'] = created_date >= yesterday
+                            if data['is_new']:
+                                logger.info(f"LoRA {folder} marked as new")
+                        
+                         # Add NSFW folder check
+                        if nsfw_folder and 'path' in data:
+                            # Case-insensitive check for 'nsfw' in path
+                            path_lower = data['path'].lower()
+                            if 'nsfw' in path_lower:
+                                logger.info(f"Setting NSFW flag for {folder} due to path: {data['path']}")
+                                data['nsfw'] = True
+
+                         # Get the filename and path from LORA_FILE_INFO
                         if folder in LORA_FILE_INFO:
                             data['filename'] = LORA_FILE_INFO[folder]['filename']
                             data['path'] = LORA_FILE_INFO[folder]['path']
                         else:
-                            # Fallback to default if not found
                             data['filename'] = f"{folder}.safetensors"
                             data['path'] = ""
 
@@ -1423,6 +1647,8 @@ async def refresh_lora(request):
         "reco_weight",
         "model_desc",
         "type",
+        "createdDate",
+        "updatedDate",
         "subdir",
         "path",
         "local_metadata",
@@ -1439,7 +1665,7 @@ async def refresh_lora(request):
             for folder in os.listdir(LORA_DATA_DIR):
                 info_file_path = os.path.join(LORA_DATA_DIR, folder, "info.json")
                 if os.path.exists(info_file_path):
-                    with open(info_file_path, "r") as f:
+                    with open(info_file_path, "r", encoding="utf-8") as f:
                         folder_info = json.load(f)
                         if str(folder_info.get("versionId")) == str(version_id):
                             existing_lora_folder = os.path.join(LORA_DATA_DIR, folder)
@@ -1571,8 +1797,18 @@ async def refresh_lora(request):
                                 lora['path'] = new_path
                                 break
                         
+                        processed_loras = validate_processed_loras(processed_loras)
                         with open(processed_loras_file, 'w', encoding="utf-8") as f:
                             json.dump(processed_loras, f, indent=4, ensure_ascii=False)
+
+            #Check for and update date fields
+            if version_info:
+                created_date = format_date(version_info.get('createdAt'))
+                updated_date = format_date(version_info.get('updatedAt'))
+                if created_date != existing_info.get('createdDate'):
+                    updates['createdDate'] = created_date
+                if updated_date != existing_info.get('updatedDate'):
+                    updates['updatedDate'] = updated_date
 
             # If there are updates, apply them while preserving user edits
             if updates:
@@ -1620,7 +1856,6 @@ async def refresh_lora(request):
                 "message": str(e)
             }, status=500)
         
-
 @PromptServer.instance.routes.post("/lora_sidebar/refresh/{lora_id}")
 async def refresh_lora(request):
     lora_id = request.match_info['lora_id']
@@ -1941,9 +2176,12 @@ async def open_folder(request):
             # Windows
             if os.name == 'nt':
                 os.startfile(folder_path)
-            # Unix-like systems (Linux, macOS)
+            # macOS and Linux/Unix-like systems
             else:
-                subprocess.Popen(['xdg-open', folder_path])
+                if sys.platform == 'darwin':  # macOS
+                    subprocess.Popen(['open', folder_path])
+                else:  # Linux/Unix
+                    subprocess.Popen(['xdg-open', folder_path])
                 
             return web.json_response({"status": "success"})
             

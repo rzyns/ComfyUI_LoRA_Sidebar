@@ -27,6 +27,7 @@ class LoraSidebar {
         this.favState = app.ui.settings.getSettingValue("LoRA Sidebar.General.favState", true);
         this.loraData = [];
         this.filteredData = [];
+        this.SorthMethod = app.ui.settings.getSettingValue("LoRA Sidebar.General.sortMethod", 'AlphaAsc');
         this.minSize = 100;
         this.maxSize = 400;
         this.loadingDelay = 800; // continuous loading delay
@@ -59,9 +60,14 @@ class LoraSidebar {
         debug.log("Tag source:", this.tagSource);
         this.a1111Style = app.ui.settings.getSettingValue("LoRA Sidebar.General.a1111Style", false);
         this.UseRG3 = app.ui.settings.getSettingValue("LoRA Sidebar.General.useRG3", false);
+        this.infoPersist = app.ui.settings.getSettingValue("LoRA Sidebar.General.infoPersist", true);
         
-        this.element = $el("div.lora-sidebar", [
-            $el("div.lora-sidebar-content", [
+        this.element = $el("div.lora-sidebar", {
+            draggable: false,
+        }, [
+            $el("div.lora-sidebar-content", {
+                draggable: false,
+            }, [
                 $el("h3", "LoRA Sidebar"),
                 this.searchInput,
                 this.modelFilterDropdown,
@@ -72,10 +78,14 @@ class LoraSidebar {
             ])
         ]);
 
+        this.preventDragging();
+
         this.placeholderUrl = "/lora_sidebar/placeholder";
+        this.CatNew = app.ui.settings.getSettingValue("LoRA Sidebar.General.catNew", true);
 
         this.showNSFW = app.ui.settings.getSettingValue("LoRA Sidebar.NSFW.hideNSFW", true);
         this.nsfwThreshold = app.ui.settings.getSettingValue("LoRA Sidebar.NSFW.nsfwLevel", 25);
+        this.nsfwFolder = app.ui.settings.getSettingValue("LoRA Sidebar.NSFW.nsfwFolder", true);
 
         this.addStyles().catch(console.error);
 
@@ -136,12 +146,27 @@ class LoraSidebar {
         return (lora.nsfw && this.nsfwThreshold < 50) || (lora.nsfwLevel && lora.nsfwLevel > this.nsfwThreshold);
     }
 
+    preventDragging() {
+        const makeNotDraggable = (element) => {
+            // Skip elements with class lora-overlay
+            if (!element.classList?.contains('lora-overlay')) {
+                element.draggable = false;
+                // Recursively process all children
+                Array.from(element.children).forEach(child => makeNotDraggable(child));
+            }
+        };
+    
+        // Start with the sidebar element
+        makeNotDraggable(this.element);
+    }    
+
     createSizeSlider() {
         this.sizeSlider = $el("input.lora-size-slider", {
             type: "range",
             min: this.minSize,
             max: this.maxSize,
             value: this.elementSize,
+            draggable: false,
             oninput: (e) => {
                 this.elementSize = parseInt(e.target.value);
                 this.updateGalleryLayout();
@@ -151,7 +176,7 @@ class LoraSidebar {
     }
 
     createModelFilterDropdown() {
-        const filterOptions = ['All', 'Pony', 'Flux', 'SDXL', 'SD 1.5', 'Custom + Other'];
+        const filterOptions = ['All', 'Pony', 'Flux', 'SD 3.5', 'Illustrious', 'SDXL', 'SD 1.5', 'Custom + Other'];
         const dropdown = $el("select.model-filter-dropdown", {
             onchange: (e) => this.handleModelFilter(e.target.value)
         });
@@ -230,7 +255,9 @@ class LoraSidebar {
     }
 
     createGalleryContainer() {
-        this.galleryContainer = $el("div.lora-gallery-container");
+        this.galleryContainer = $el("div.lora-gallery-container", {
+            draggable: false,            
+        });
         return this.galleryContainer;
     }
 
@@ -366,6 +393,8 @@ class LoraSidebar {
         categories.sort((a, b) => {
             if (a.getAttribute('data-category') === 'Favorites') return -1;
             if (b.getAttribute('data-category') === 'Favorites') return 1;
+            if (a.getAttribute('data-category') === 'New') return -1;
+            if (b.getAttribute('data-category') === 'New') return 1;
             return a.getAttribute('data-category').localeCompare(b.getAttribute('data-category'));
         });
         categories.forEach(category => this.galleryContainer.appendChild(category));
@@ -386,9 +415,36 @@ class LoraSidebar {
     getCategoryItems(categoryName) {
         const activeTags = this.getActiveTags();
         let items;
+        const NEW_CATEGORY_LIMIT = 100;
 
         if (categoryName === "Favorites") {
             items = this.filteredData.filter(lora => lora.favorite);
+        } else if (categoryName === "New") {
+            // Only process if the setting is enabled
+            if (!this.CatNew) {
+                return [];
+            }
+
+            // Get new items excluding favorites
+            let newItems = this.filteredData.filter(lora => lora.is_new && !lora.favorite);
+
+            // If we have more than limit items, check if they all have the same date
+            if (newItems.length > NEW_CATEGORY_LIMIT) {
+                // Get unique creation times
+                const uniqueDates = new Set(newItems.map(lora => lora.created_time));
+                
+                // If all items have the same date (likely initial import)
+                // and we're over the limit, disable the category
+                if (uniqueDates.size === 1) {
+                    return [];
+                }
+
+                // Otherwise, just limit to the most recent items
+                newItems.sort((a, b) => b.created_time - a.created_time);
+                newItems = newItems.slice(0, NEW_CATEGORY_LIMIT);
+            }
+
+            items = newItems;
         } else if (this.sortModels === 'Subdir') {
             items = this.filteredData.filter(lora => {
                 const parts = lora.subdir ? lora.subdir.split('\\') : [];
@@ -406,10 +462,10 @@ class LoraSidebar {
             }
         }
 
-        // THIS IS WHERE OUR SORT HAPPENS AND WILL NEED A LOT OF LOVE LATER
-        if (items && items.length > 0) {
-            items.sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase()));
-        }
+        // THIS IS WHERE OUR SORT HAPPENS ADN WE'RE DOING IT IN THE BE NOW WOOHOO
+        //if (items && items.length > 0) {
+        //    items.sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase()));
+        //}
 
         return items || [];
     }
@@ -453,12 +509,17 @@ class LoraSidebar {
                 return baseModel.includes('pony');
             case 'Flux':
                 return baseModel.includes('flux');
+            case 'SD 3.5':
+                return baseModel.includes('sd') && baseModel.includes('3.5');
+            case 'Illustrious':
+                return baseModel.includes('illustrious');
             case 'SDXL':
                 return baseModel.includes('sdxl');
             case 'SD 1.5':
                 return baseModel.includes('sd') && baseModel.includes('1.5');
             case 'Custom + Other':
-                return !['pony', 'flux', 'sdxl', 'sd', '1.5'].some(model => baseModel.includes(model));
+                return !['pony', 'flux', 'sdxl', 'illustrious'].some(model => baseModel.includes(model)) &&
+                !(baseModel.includes('sd') && (baseModel.includes('1.5') || baseModel.includes('3.5')));
             default:
                 return true;
         }
@@ -677,20 +738,58 @@ class LoraSidebar {
 
     async loadLoraData(offset = 0, limit = this.batchSize) {
         try {
-            const response = await api.fetchApi(`/lora_sidebar/data?offset=${offset}&limit=${limit}`);
+            // Get current sort preference - you can store this in your class or get from UI
+            const sortPreference = this.SorthMethod || 'AlphaAsc'; // default to alpha
+
+            // Determine sort type and direction
+            let sortType, ascending;
+            switch(sortPreference) {
+                case 'AlphaAsc':
+                    sortType = 'alpha';
+                    ascending = true;
+                    break;
+                case 'AlphaDesc':
+                    sortType = 'alpha';
+                    ascending = false;
+                    break;
+                case 'DateNewest':
+                    sortType = 'date';
+                    ascending = false;
+                    break;
+                case 'DateOldest':
+                    sortType = 'date';
+                    ascending = true;
+                    break;
+                default:
+                    sortType = 'alpha';
+                    ascending = true;
+            }
+            
+            // Build the URL with sort parameters
+            const url = `/lora_sidebar/data?` + new URLSearchParams({
+                offset: offset,
+                limit: limit,
+                sort: sortType,
+                ascending: ascending,
+                nsfw_folder: this.nsfwFolder
+            });
+
+            const response = await api.fetchApi(url);
             if (response.ok) {
                 const data = await response.json();
                 if (data && data.loras) {
                     const favorites = data.favorites || [];
-
                     // Use a Set to keep track of unique LoRA IDs
                     const existingLoraIds = new Set(this.loraData.map(lora => lora.id));
 
-                    const newLoras = data.loras.filter(lora => !existingLoraIds.has(lora.id))
+                    const newLoras = data.loras
+                    .filter(lora => !existingLoraIds.has(lora.id))
                     .map(lora => ({
                         ...lora,
                         favorite: favorites.includes(lora.id)
                     }));
+
+                    debug.log("Loaded LoRAs with new flags:", newLoras.filter(l => l.is_new));
                     
                     if (offset === 0) {
                         this.loraData = newLoras;
@@ -723,7 +822,7 @@ class LoraSidebar {
             debug.log(`Current filteredData length: ${this.filteredData.length}`);
         
             // Render Favorites
-            const favorites = this.filteredData.filter(lora => lora.favorite);
+            const favorites = this.getCategoryItems("Favorites");
             if (favorites.length > 0 && startIndex === 0) {
                 try {
                     const favoritesCategory = this.createCategoryElement("Favorites", favorites);
@@ -734,11 +833,30 @@ class LoraSidebar {
                     console.error('Error rendering favorites:', error);
                 }
             }
+
+            // Render New Items
+            const newItems = this.getCategoryItems("New");
+            if (newItems.length > 0 && startIndex === 0) {
+                try {
+                    const newCategory = this.createCategoryElement("New", newItems);
+                    if (newCategory) {
+                        this.galleryContainer.appendChild(newCategory);
+                    }
+                } catch (error) {
+                    console.error('Error rendering new items:', error);
+                }
+            }
         
-            // Render LoRAs (excluding favorites)
-            const nonFavorites = this.filteredData.filter(lora => !lora.favorite);
-            const endIndex = Math.min(startIndex + count, nonFavorites.length);
-            const lorasToRender = nonFavorites.slice(startIndex, endIndex);
+            // Render LoRAs (excluding favorites and new items)
+            const categoryItems = new Set([
+                ...favorites.map(l => l.id),
+                ...newItems.map(l => l.id)
+            ]);
+            const otherLoras = this.filteredData.filter(lora => !categoryItems.has(lora.id));
+
+            // const otherLoras = this.filteredData.filter(lora => !lora.favorite && !lora.is_new);
+            const endIndex = Math.min(startIndex + count, otherLoras.length);
+            const lorasToRender = otherLoras.slice(startIndex, endIndex);
         
             if (this.sortModels === 'Subdir') {
                 const categories = {};
@@ -939,16 +1057,22 @@ class LoraSidebar {
             categoryContainer = this.galleryContainer.querySelector(`.lora-category[data-category="${categoryName}"]`);
             
             if (!categoryContainer) {
-                categoryContainer = $el("div.lora-category");
+                categoryContainer = $el("div.lora-category", {
+                    draggable: false
+                });
                 
                 // Manually set the data-category attribute
                 categoryContainer.setAttribute('data-category', categoryName);
                 
                 this.galleryContainer.appendChild(categoryContainer);
-                
-            }
+            } else {
+                // Make sure existing containers are also not draggable
+                categoryContainer.draggable = false;
+            }                
         } else {
-            categoryContainer = $el("div.lora-category");
+            categoryContainer = $el("div.lora-category", {
+                draggable: false  // Add here
+            });
             
             // Manually set the data-category attribute
             categoryContainer.setAttribute('data-category', categoryName);
@@ -971,7 +1095,9 @@ class LoraSidebar {
                     : this.defaultCatState;
             }
             
-            header = $el("div.category-header", {}, [
+            header = $el("div.category-header", {
+                draggable: false
+            }, [
                 $el("h3.category-title", {}, [categoryName]),
                 $el("span.category-toggle", {}, [isExpanded ? "▼" : "▶"])
             ]);
@@ -983,7 +1109,9 @@ class LoraSidebar {
     
         let lorasContainer = categoryContainer.querySelector('.lora-items-container');
         if (!lorasContainer) {
-            lorasContainer = $el("div.lora-items-container");
+            lorasContainer = $el("div.lora-items-container", {
+                draggable: false
+            });
 
             // fav check
             const isFavorites = categoryName === "Favorites";
@@ -1173,6 +1301,28 @@ class LoraSidebar {
                             type: "comfy-lora",
                             id: lora.id
                         });
+
+                        
+                        // Debug logs for element finding
+                        const loraItem = e.target.parentElement;
+                        debug.log("LoRA Item found:", loraItem);
+
+                        const img = loraItem.querySelector('img');
+                        debug.log("Image element found:", img);
+
+                        if (img) {
+                            debug.log("Attempting to set drag image:", {
+                                width: img.width,
+                                height: img.height,
+                                src: img.src,
+                                complete: img.complete
+                            });
+                            e.dataTransfer.setDragImage(img, img.width / 2, img.height / 2);
+                        } else {
+                            console.error("No image element found in LoRA item");
+                        }
+
+
                         debug.log("Setting drag data from overlay:", dragData);
                         e.dataTransfer.setData("application/json", dragData);
                         this.handleDragStart(e);
@@ -1281,7 +1431,13 @@ class LoraSidebar {
                 });
     
                 if (!idResponse.ok) {
-                    throw new Error(`Failed to perform hash lookup for LoRA: ${lora.name}`);
+                    // Check local_metadata flag to determine if this is a custom LoRA
+                    if (lora.local_metadata) {
+                        this.showToast("warn", "Custom LoRA Detected", 'Skipping refresh for custom LoRA, please use the LoRA Info Pop-up window to update metadata and images for Custom LoRAs.', 5000);
+                        return; // Exit early for custom LoRA
+                    } else {
+                        throw new Error(`Failed to perform hash lookup for LoRA: ${lora.name}, model probably removed.`);
+                    }
                 }
     
                 const idResult = await idResponse.json();
@@ -1289,7 +1445,7 @@ class LoraSidebar {
                     versionId = idResult.data.versionId;
                     debug.log(`Found versionId ${versionId} for LoRA ${lora.name}`);
                 } else {
-                    throw new Error(`Hash lookup failed or no versionId found for LoRA: ${lora.name}`);
+                    throw new Error(`Missing or malformed data in API response for LoRA: ${lora.name}`);
                 }
             }
     
@@ -1316,7 +1472,7 @@ class LoraSidebar {
                         this.loraData[index] = { ...this.loraData[index], ...updatedLoraData };
                         debug.log("Merged LoRA Data:", this.loraData[index]);
                         this.filteredData = [...this.loraData];
-                        this.renderLoraGallery();
+                        this.handleSearch(this.state.searchTerm || '');
                         app.extensionManager.toast.add({
                             severity: "success",
                             summary: "LoRA Refreshed",
@@ -1742,7 +1898,7 @@ class LoraSidebar {
                                                 newLoraElement.style.width = existingLoraContainer.style.width;
                                             }
                                             existingLoraContainer.replaceWith(newLoraElement);
-                                            console.log('We got a response and tried to replce the container.');
+                                            debug.log('We got a response and tried to replce the container.');
                                         }
                                     }
                                 } catch (error) {
@@ -1943,7 +2099,7 @@ class LoraSidebar {
         };
 
         const fetchImagesIfNeeded = async () => {
-            console.log("Checking for images:", {
+            debug.log("Checking for images:", {
                 hasImages: !!lora.images,
                 imageCount: lora.images?.length,
                 baseModel: lora.baseModel,
@@ -1953,16 +2109,16 @@ class LoraSidebar {
             if (!lora.images || lora.images.length === 0) {
                 // Only fetch for non-custom LoRAs that have a versionId
                 if (lora.baseModel !== 'custom' && lora.versionId) {
-                    console.log("Fetching images for lora:", lora.name);
+                    debug.log("Fetching images for lora:", lora.name);
                     try {
                         const response = await fetch(`/lora_sidebar/refresh/${lora.versionId}`, {
                             method: 'POST'
                         });
                         
-                        console.log("Response received:", response.status);
+                        debug.log("Response received:", response.status);
                         if (response.ok) {
                             const result = await response.json();
-                            console.log("Got refresh result:", result);
+                            debug.log("Got refresh result:", result);
                             if (result.status === 'success' && result.data) {
                                 // Update the lora object with new data
                                 Object.assign(lora, result.data);
@@ -1976,7 +2132,7 @@ class LoraSidebar {
                         console.error('Error fetching LoRA images:', error);
                     }
                 } else {
-                    console.log("Skipping image fetch:", {
+                    debug.log("Skipping image fetch:", {
                         isCustom: lora.baseModel === 'custom',
                         hasVersionId: !!lora.versionId
                     });
@@ -2449,6 +2605,10 @@ class LoraSidebar {
         // Add trained words
         const trainedWordsContainer = $el("div.trained-words");
         this.createEditableTagSection('trained_words', lora, trainedWordsContainer);
+        $el("button.copy-all-button", {
+            textContent: "Copy All",
+            onclick: () => this.copyToClipboard(updatedLora.trained_words.join(", "))
+        })
         contentContainer.appendChild(trainedWordsContainer);
 
         // Add tags
@@ -2584,17 +2744,21 @@ class LoraSidebar {
         // Add show class to trigger transition
         setTimeout(() => popup.classList.add('show'), 0);
     
-        // Close the popup when clicking outside
+        // Close the popup when clicking outside (if persistence is disabled)
         const closePopup = (event) => {
-            if (!popup.contains(event.target) && event.target !== iconElement) {
+            if (!this.infoPersist && !popup.contains(event.target) && event.target !== iconElement) {
                 popup.remove();
                 document.removeEventListener("click", closePopup);
                 this.currentPopup = null;
             }
         };
-        setTimeout(() => {
-            document.addEventListener("click", closePopup);
-        }, 0);
+
+        // Only add the click-outside listener if persistence is disabled
+        if (!this.infoPersist) {
+            setTimeout(() => {
+                document.addEventListener("click", closePopup);
+            }, 0);
+        }
 
         // Update the current popup reference
         this.currentPopup = popup;
@@ -2987,6 +3151,15 @@ class LoraSidebar {
                         : [$el("span", { textContent: "None", className: "no-tags" })]
                 );
                 container.appendChild(itemsContainer);
+
+                // Only add the Copy All button for trained words section when there are items
+                if (type === 'trained_words' && items.length > 0) {
+                    const copyAllButton = $el("button.copy-all-button", {
+                        textContent: "Copy All",
+                        onclick: () => this.copyToClipboard(items.join(", "))
+                    });
+                    container.appendChild(copyAllButton);
+                }
             }
         };
     
@@ -3036,7 +3209,7 @@ class LoraSidebar {
                 throw new Error(result.message || 'Failed to add image');
             }
         } catch (error) {
-            console.log("Error adding last generated image:", error);
+            debug.log("Error adding last generated image:", error);
             this.showToast("error", "Add Failed", error.message || "No generated images found");
             return false;
         }
@@ -3591,8 +3764,24 @@ class LoraSidebar {
         }
     }
 
+    updateSortMethod(newVal) {
+        this.SorthMethod = newVal;
+    }
+
+    updateCatNew(newVal) {
+        this.CatNew = newVal;
+    }
+
+    updateNSFWfolder(newVal) {
+        this.nsfwFolder = newVal;
+    }
+
     updateCategoryState(newVal) {
         this.defaultCatState = newVal === "Expanded";
+    }
+
+    updateInfoPersist(newVal) {
+        this.infoPersist = newVal;
     }
 
     updateBatchSize(newVal) {
@@ -3610,6 +3799,7 @@ class LoraSidebar {
     updateUseRG3(newVal) {
         this.UseRG3 = newVal;
     }
+
 
     ////////
 
@@ -3668,7 +3858,7 @@ app.registerExtension({
             id: "LoRA Sidebar.General.showModels",
             name: "Base Models to Show",
             type: 'combo',
-            options: ['All', 'Pony', 'Flux', 'SDXL', 'SD1.5', 'Other'],
+            options: ['All', 'Pony', 'Flux', 'SD 3.5', 'Illustrious', 'SDXL', 'SD1.5', 'Other'],
             defaultValue: 'All',
             onChange: (newVal, oldVal) => {
                 if (app.loraSidebar && oldVal !== undefined) {
@@ -3704,18 +3894,18 @@ app.registerExtension({
             }
         });
 
-/*         app.ui.settings.addSetting({
+        app.ui.settings.addSetting({
             id: "LoRA Sidebar.General.infoPersist",
             name: "Keep LoRA Info Open",
             tooltip : 'Keeps the LoRA Info Window Open Unless Manually Closed',
             type: "boolean",
-            defaultValue: false,
+            defaultValue: true,
             onChange: (newVal, oldVal) => {
                 if (app.loraSidebar && oldVal !== undefined) {
                     app.loraSidebar.updateInfoPersist(newVal);
                 }
             }
-        }); */
+        });
 
         app.ui.settings.addSetting({
             id: "LoRA Sidebar.General.a1111Style",
@@ -3744,8 +3934,35 @@ app.registerExtension({
         });
 
         app.ui.settings.addSetting({
-            id: "LoRA Sidebar.General.sortModels",
+            id: "LoRA Sidebar.General.catNew",
+            name: "Use New Category",
+            tooltip : 'Automatically sorts recently added LoRAs into a special category',
+            type: "boolean",
+            defaultValue: true,
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.updateCatNew(newVal);
+                }
+            }
+        });
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.General.sortMethod",
             name: "Sort LoRAs By",
+            tooltip : 'How LoRAs will be sorted, for this change to take effect (for now) please refresh the broswer',
+            type: 'combo',
+            options: ['AlphaAsc', 'DateNewest', 'AlphaDesc', 'DateOldest'],
+            defaultValue: 'AlphaAsc',
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.updateSortMethod(newVal);
+                }
+            }
+        });
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.General.sortModels",
+            name: "Categorize LoRAs By",
             tooltip : 'Subdir uses your directory structure, Tags use model tags, either Custom or from CivitAI',
             type: 'combo',
             options: ['None', 'Subdir', 'Tags'],
@@ -3759,7 +3976,7 @@ app.registerExtension({
 
         app.ui.settings.addSetting({
             id: "LoRA Sidebar.General.tagSource",
-            name: "Tags to Use",
+            name: "Category Tags to Use",
             tooltip : 'Custom will use tags frm the setting above. CivitAI uses the main site categories like Character, Clothing, Poses, etc.',
             type: 'combo',
             options: ['CivitAI', 'Custom'],
@@ -3838,10 +4055,10 @@ app.registerExtension({
             }
         });
 
-/*         app.ui.settings.addSetting({
+        app.ui.settings.addSetting({
             id: "LoRA Sidebar.NSFW.nsfwFolder",
-            name: "Use NSFW Folder",
-            tooltip : 'Enabled this will flag every LoRA within a NSFW folder (and its subfolders) as NSFW, does not apply to already processed LoRAs',
+            name: "Use NSFW Folders",
+            tooltip : 'Flags LoRAs as NSFW if they are in a folder containing "NSFW" (Ignores saved NSFW Flags)',
             type: "boolean",
             defaultValue: true,
             onChange: (newVal, oldVal) => {
@@ -3849,6 +4066,6 @@ app.registerExtension({
                     app.loraSidebar.updateNSFWfolder(newVal);
                 }
             }
-        }); */
+        });
     },
 });
