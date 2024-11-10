@@ -1,11 +1,20 @@
 # ComfyUI_LoRA_Sidebar
-### Now Supports SD 3.5 and Illustrios LoRAs!
+### MASSIVE Update, just get it!
 ## What is this?
 A custom front-end UX node that creates a visual library of all your LoRAs. It's designed to be fast, slim, and make using LoRAs in Comfy a lot more fun for visual users - especially if you have lots of LoRAs. Should make people used to A1111 and other UI heavy platforms feel more at home. If you've got lots of LoRAs, this sidebar could be your new best friend!
 
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
 ## Updates
+#### 11/09/24
+- Huge update that touched almost every part of the sidebar
+- Too many UX improvements to mention, tl;dr lora-info pop-up feels like new
+- Tons of new settings, check out the settings page to see them all
+- Brand new data handling backend, should support any number of LoRAs (10,20,30k+)
+- Vastly improved lora info pop-up and image previews
+- Lots of drag and drop fixes and improvements
+- Added LoRA counts to categories
+- Improved startup messages for those that like to watch those things 😄
 #### 11/02/24
 - Added Support for SD 3.5 and Illustrious LoRAs
 - Improved LoRA Info Pop Up UX
@@ -13,14 +22,6 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 - New option to use NSFW folder structure
 - Improved processing and refresh logic
 - Now supports local saved sha256 hashes
-- Lots of small big fixes and tweaks
-#### 10/31/24
-- Happy Spooky Day, what better way to celebrate than with a big update!
-- Massive update to the LoRA Info Pop-up, including the ability to edit almost all fields directly from the pop-up, perfect for Custom LoRA users
-- Easily add new images to the LoRA via the pop-up, change the preview image, and get access to folders and files
-- Added support for rgthree Power Lora Loader nodes, supported with all drag and drop funtions
-- Added support for A1111 LoRA prompt tags, if you have a node that supports it you can just drag and drop into your prompt node
-- Fixes and enchanced all local data and image processing, big improvement here for custom LoRAs again
 - Lots of small big fixes and tweaks
 
 ## Features
@@ -61,10 +62,13 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 - Filter by base model using the dropdown
 - Add LoRAs to your favorites by clicking on the ⭐ (remove them by clicking it again)
 - View LoRA details by click on the **i** button, this popup contains lots of useful data and lets you copy tags and delete LoRAs
+  - Also edit almost all fields here such as name, tags, weight, etc. Great for custom LoRAs
+  - Easily add images to the info slideshow and/or set custom previews
 - Copy the lora trained words by using the 📋 button
 - Refresh LoRA details with the...refresh button
 - Drag and drop the LoRA images to create a LoRA node on your canvas, or drop them on a LoRA node to update it
-  - Only supports default (core) ComfyUI nodes for now
+  - Supports Core ComfyUI nodes AND rgthree Power Loader nodes
+  - Can also automatically insert A1111 style tags into prompts if you have a plugin that supports that syntax
 - Use the slider at the top to quickly change the size of the LoRA Previews
 - Update LoRA previews and/or data by editing the preview image and info files in the LoRA folder in the custom node's loraData folder - this is the best way to get custom LoRAs working fully and all the data is local only 
 - Customize the look and feel with the settings
