@@ -61,7 +61,6 @@ class LoraSidebar {
         this.a1111Style = app.ui.settings.getSettingValue("LoRA Sidebar.General.a1111Style", false);
         this.UseRG3 = app.ui.settings.getSettingValue("LoRA Sidebar.General.useRG3", false);
         this.infoPersist = app.ui.settings.getSettingValue("LoRA Sidebar.General.infoPersist", true);
-        // this.debouncedHandleScroll = this.debounce(this.handleScroll.bind(this), 150);
         
         this.element = $el("div.lora-sidebar", {
             draggable: false,
@@ -240,21 +239,6 @@ class LoraSidebar {
         this.searchTimeout = setTimeout(() => {
             this.handleSearch(searchInput);
         }, this.searchDelay);
-    }
-
-    // scroll debounce utility - remove this hopefully
-    debounce(func, wait) {
-        let timer = null;
-        return (...args) => {
-            if (timer) window.cancelAnimationFrame(timer);
-            
-            return new Promise(resolve => {
-                timer = window.requestAnimationFrame(() => {
-                    timer = null;
-                    resolve(func.apply(this, args));
-                });
-            });
-        };
     }
 
     createLoadingIndicator() {
@@ -788,6 +772,19 @@ class LoraSidebar {
             if (response.ok) {
                 const data = await response.json();
                 if (data && data.loras) {
+                    // msfw check
+                    if (this.nsfwFolder) {
+                        data.loras = data.loras.map(lora => {
+                            if (lora.subdir && lora.subdir.toLowerCase().includes('nsfw')) {
+                                return {
+                                    ...lora,
+                                    nsfw: true,
+                                    nsfwLevel: 100
+                                };
+                            }
+                            return lora;
+                        });
+                    }
                     // Initial load
                     if (offset === 0) {
                         this.loraData = data.loras;
@@ -826,6 +823,20 @@ class LoraSidebar {
                                 if (nextResponse.ok) {
                                     const nextData = await nextResponse.json();
                                     if (nextData && nextData.loras) {
+                                        // nsfw check 2
+                                        if (this.nsfwFolder) {
+                                            nextData.loras = nextData.loras.map(lora => {
+                                                if (lora.subdir && lora.subdir.toLowerCase().includes('nsfw')) {
+                                                    return {
+                                                        ...lora,
+                                                        nsfw: true,
+                                                        nsfwLevel: 100
+                                                    };
+                                                }
+                                                return lora;
+                                            });
+                                        }
+
                                         // Carefully append new data
                                         this.loraData = [...this.loraData, ...nextData.loras];
                                         
@@ -4668,7 +4679,7 @@ app.registerExtension({
         app.ui.settings.addSetting({
             id: "LoRA Sidebar.NSFW.nsfwFolder",
             name: "Use NSFW Folders",
-            tooltip : 'Flags LoRAs as NSFW if they are in a folder containing "NSFW" (Ignores saved NSFW Flags)',
+            tooltip : 'Flags LoRAs as NSFW if they are in a folder containing "NSFW" (Ignores saved NSFW Flags) - Needs browser refresh to take effect after setting.',
             type: "boolean",
             defaultValue: true,
             onChange: (newVal, oldVal) => {
