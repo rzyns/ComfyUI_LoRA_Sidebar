@@ -15,8 +15,10 @@ from collections import Counter
 import logging
 import glob
 import subprocess
+import sys
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
+import random
 
 
 # Set up logging
@@ -54,8 +56,36 @@ TEST_LIMIT = 0
 
 # Add a global variable to track if processing is in progress
 is_processing = False
+
 PROCESSED_LORAS_VERSION = 2  # used to force reprocessing LoRAs when data files change
+NEW_ITEM_HOURS = 48
 LORA_FILE_INFO = {}
+
+# Cache data for faster performance with new sorting
+LORA_CACHE = {
+    'ordered_loras': None,
+    'sent_loras': set()  # Keep track of which LoRAs we've sent to FE
+}
+
+# Caching store variables
+CACHE_SETTINGS = {
+    'sortMethod': 'AlphaAsc',
+    'sortModels': 'None',
+    'tagSource': 'CivitAI',
+    'customTags': [],
+    'catNew': True
+}
+
+# loading bar stuff
+ANSI_COLORS = {
+    'GREEN': '\033[92m',
+    'BLUE': '\033[94m',
+    'CYAN': '\033[96m',
+    'YELLOW': '\033[93m',
+    'RED': '\033[91m',
+    'ENDC': '\033[0m',
+    'BOLD': '\033[1m'
+}
 
 # hack for lora processing
 class LoraDataStore:
@@ -140,52 +170,6 @@ async def get_lora_sort_metadata():
             logger.error(f"Error getting info for {folder}: {str(e)}")
             continue
     return sort_metadata
-
-def sort_loras(loras, sort_by='alpha', sort_metadata=None, favorites=None, ascending=True):
-    """
-    Sorts a list of LoRA folders by specified criteria.
-    
-    Args:
-        loras: List of folder names to sort
-        sort_by: 'alpha' or 'date'
-        sort_metadata: Dictionary from get_lora_sort_metadata()
-        favorites: Optional list of favorite LoRA IDs to prioritize
-        ascending: If True, sort A-Z or oldest first. If False, Z-A or newest first.
-    
-    Returns:
-        List of sorted folder names
-    """
-    sort_metadata = sort_metadata or {}  # Ensure sort_metadata is at least an empty dict
-    
-    # Helper function to get sort key for dates
-    def get_date_key(lora_id):
-        if not sort_metadata:
-            return 0
-        lora_meta = sort_metadata.get(lora_id, {})
-        return lora_meta.get('ctime', 0)
-    
-    # Helper function to get sort key for alphabetical
-    def get_alpha_key(lora_id):
-        if not sort_metadata:
-            return lora_id.lower()
-        lora_meta = sort_metadata.get(lora_id, {})
-        return lora_meta.get('name', lora_id).lower()
-    
-    # Choose sort key function based on sort_by
-    sort_key = get_alpha_key if sort_by == 'alpha' else get_date_key
-    
-    # Split into favorites and non-favorites
-    if favorites:
-        fav_loras = [l for l in loras if l in favorites]
-        non_fav_loras = [l for l in loras if l not in favorites]
-        
-        # Sort each group
-        sorted_favs = sorted(fav_loras, key=sort_key, reverse=not ascending)
-        sorted_non_favs = sorted(non_fav_loras, key=sort_key, reverse=not ascending)
-        
-        return sorted_favs + sorted_non_favs
-    else:
-        return sorted(loras, key=sort_key, reverse=not ascending)
 
 async def hash_file(filepath):
     # Check for local saved hash
@@ -371,6 +355,17 @@ async def download_image(session, image_url, save_path):
                 f.write(await response.read())
             return os.path.basename(final_save_path)
     return None
+
+def get_tag_categories(settings):
+    """Get appropriate tag categories based on settings."""
+    PREDEFINED_TAGS = [
+        "character", "style", "celebrity", "concept", "clothing", "poses", 
+        "background", "tool", "buildings", "vehicle", "objects", "animal", "assets", "action"
+    ]
+    
+    if settings['tagSource'] == 'CivitAI':
+        return PREDEFINED_TAGS
+    return [tag.strip().lower() for tag in settings.get('customTags', [])]
 
 def format_date(date_input):
     """
@@ -591,6 +586,83 @@ def find_custom_images(base_path, base_filename):
     logger.info(f"Found total of {len(custom_images)} custom images")
     return custom_images
 
+def manage_category_counts(action="calculate", **kwargs):
+    """
+    Unified category count management.
+    
+    Args:
+        action: Type of operation ("calculate" or "update")
+        kwargs: Arguments based on action type:
+            For "calculate":
+                loras: Full list of loras
+                paginated_loras: Current page of loras (optional)
+                settings: User settings
+            For "update":
+                old_category: Previous category
+                new_category: New category
+                current_counts: Existing counts dict (optional)
+    """
+    if not LORA_CACHE.get('ordered_loras'):
+        return None
+
+    if action == "calculate":
+        loras = kwargs.get('loras', [])
+        paginated_loras = kwargs.get('paginated_loras', [])
+        settings = kwargs.get('settings', {})
+        
+        category_counts = {}
+        
+        # Count real categories
+        for lora in loras:
+            if not lora['favorite'] and not lora['is_new']: # don't count favs or new items
+                category = lora['category']
+                if category not in category_counts:
+                    category_counts[category] = {'total': 0, 'loaded': 0}
+                category_counts[category]['total'] += 1
+
+        # Add status counts
+        status_counts = {
+            'Favorites': {'total': len([l for l in loras if l['favorite']])},
+            'New': {'total': len([l for l in loras if l['is_new'] and not l['favorite']])}
+        }
+        category_counts.update(status_counts)
+
+        # Count loaded if provided
+        if paginated_loras:
+            for lora in paginated_loras:
+                if lora['favorite']:
+                    category_counts['Favorites']['loaded'] = category_counts['Favorites'].get('loaded', 0) + 1
+                elif lora['is_new'] and settings.get('catNew'):
+                    category_counts['New']['loaded'] = category_counts['New'].get('loaded', 0) + 1
+                else:
+                    category = lora['category']
+                    category_counts[category]['loaded'] = category_counts[category].get('loaded', 0) + 1
+
+    elif action == "update":
+        old_category = kwargs.get('old_category')
+        new_category = kwargs.get('new_category')
+        category_counts = dict(kwargs.get('current_counts', LORA_CACHE.get('category_info', {})))
+
+        # Ensure categories exist
+        for cat in [old_category, new_category]:
+            if cat and cat not in category_counts:
+                category_counts[cat] = {'total': 0, 'loaded': 0}
+            
+        # Update counts
+        if old_category:
+            category_counts[old_category]['total'] -= 1
+            if 'loaded' in category_counts[old_category]:
+                category_counts[old_category]['loaded'] -= 1
+            
+        if new_category:
+            category_counts[new_category]['total'] += 1
+            if 'loaded' in category_counts[new_category]:
+                category_counts[new_category]['loaded'] += 1
+
+    # Update cache and return
+    LORA_CACHE['category_info'] = category_counts
+    return category_counts
+
 def validate_processed_loras(processed_loras):
     """Validate and clean processed_loras data, keeping newest paths"""
     # Ensure we have required structure
@@ -624,6 +696,60 @@ def validate_processed_loras(processed_loras):
     # Convert back to list, now with unique entries and newest paths
     processed_loras["loras"] = list(entries_by_filename.values())
     return processed_loras
+
+def get_completion_message(lora_count):
+    # after all this i need to have some fun
+    messages = {
+        0: [
+            "No LoRAs found - your collection awaits! 🟢",
+            "Empty canvas - ready for your first LoRA! 🎨",
+            "Time to start your LoRA adventure! 🚀"
+        ],
+        1: [
+            "A humble beginning - keep going! 🔰",
+            "🥠 There are more LoRAs in your future.",
+            "IT HAS BEGUN! *DUN-DUN-DUN-DUN-DA-DA-DUN-DUN-DUN-DUN*",
+            "I appreciate it, but honestly - why did you even download this thing? 😂"
+        ],
+        50: [
+            "Nice collection! You're well on your way to LoRA mastery. 🎓",
+            "Your LoRA library is growing! 👍",
+            "A curator of fine LoRAs, I see! 🛒",
+        ],
+        500: [
+            "Impressive arsenal of LoRAs! You're a serious collector. 🥃",
+            "Your LoRA collection is becoming a force to be reckoned with! 💪",
+            "Triple digits! Now that's dedication...or something else... 💦"
+        ],
+        2000: [
+            "This collection is getting scary! 😱",
+            "Your LoRA collection is award winng, just don't ask which one! 🥇",
+            "You know I can see these LoRAs...right? 👀",
+            "I know, you can stop anytime you want. 🚬"
+        ],
+        9000: [
+            "WHAT?! IT'S OVER 9️⃣0️⃣0️⃣0️⃣!!!",
+            "They said they had a lot of LoRAs. You said, Hold my beer. 🍺",
+            "Behold, a true LoRA connoisseur walks among us! ಠ_ರೃ",
+            "You don't remember downloading half of these, do you? 🤔"
+        ],
+        15000: [
+            "Are you from Sparta? Because this IS MADNESS! ⚔️",
+            "Impressive. Most Impressive. 🌑",
+            "⊙▂⊙"
+        ],
+        float('inf'): [
+            "🏆 HOW DID THIS EVEN LOAD?!? 🏆",
+            "🏆 GOD TIER 🏆",
+            "🏆 CIVITAI WISHES IT WAS THIS COOL 🏆"
+        ]
+    }
+    
+    # Find the appropriate threshold
+    threshold = max((t for t in messages.keys() if lora_count >= t), key=lambda x: x if x != float('inf') else float('-inf'))
+    
+    # Return a random message from that threshold's list
+    return random.choice(messages[threshold])
 
 @PromptServer.instance.routes.get("/lora_sidebar/loras/list")
 async def list_loras(request):
@@ -659,8 +785,6 @@ async def list_loras(request):
                             break
                 if TEST_LIMIT > 0 and len(lora_files) >= TEST_LIMIT:
                     break
-
-    logger.info(f"LoRA list found, has {len(lora_files)}")
     
     return lora_files
 
@@ -836,7 +960,9 @@ async def get_unprocessed_count(request):
                         "new_loras": current_lora_names,
                         "moved_loras": [],
                         "duplicate_loras": [],
-                        "missing_loras": []
+                        "missing_loras": [],
+                        "local_metadata": 0,
+                        "remote_metadata": 0
                     }
                     
                     LoraDataStore.set_data(response_data)
@@ -850,6 +976,8 @@ async def get_unprocessed_count(request):
     new_loras = []
     moved_loras = []
     duplicate_loras = []
+    local_metadata_count = 0
+    remote_metadata_needed = 0
 
     # Create a dictionary of processed LoRAs (keyed by filename)
     processed_loras_dict = {lora['filename']: lora['path'] for lora in processed_loras['loras']}
@@ -859,40 +987,51 @@ async def get_unprocessed_count(request):
     filename_count = Counter(current_loras.keys())
     potential_duplicates = [filename for filename, count in filename_count.items() if count > 1]
 
-    # Detect new, moved, and duplicate LoRAs
+    # Check each lora
     for base_filename, file_path in current_loras.items():
+        needs_processing = False
+        
         if base_filename in potential_duplicates:
             if base_filename not in processed_loras_dict:
-                logger.info(f"New LoRA found (potential duplicate): {base_filename}")
                 new_loras.append(base_filename)
-                unprocessed_count += 1
+                needs_processing = True
             elif processed_loras_dict[base_filename] != file_path:
-                logger.info(f"LoRA moved (potential duplicate): {base_filename}")
                 moved_loras.append(base_filename)
-                unprocessed_count += 1
+                needs_processing = True
             duplicate_loras.append(base_filename)
         else:
             if base_filename not in processed_loras_dict:
-                logger.info(f"New LoRA found: {base_filename}")
                 new_loras.append(base_filename)
-                unprocessed_count += 1
+                needs_processing = True
             elif processed_loras_dict[base_filename] != file_path:
-                logger.info(f"LoRA moved: {base_filename}")
                 moved_loras.append(base_filename)
-                unprocessed_count += 1
+                needs_processing = True
+
+        # If this LoRA needs processing, check for local metadata
+        if needs_processing:
+            if await check_local_info(file_path):
+                local_metadata_count += 1
+            else:
+                remote_metadata_needed += 1
 
     # Check for missing LoRAs
-    missing_loras = [lora for lora in processed_loras_dict.keys() if lora not in current_loras]
+    missing_loras = [lora for lora in processed_loras_dict.keys() 
+                    if lora.strip() not in current_loras]
 
-    logger.info(f"Total LoRAs: {len(lora_files)}, Unprocessed: {unprocessed_count}")
-    logger.info(f"New: {len(new_loras)}, Moved: {len(moved_loras)}, Duplicates: {len(duplicate_loras)}, Missing: {len(missing_loras)}")
+    total_unprocessed = len(new_loras) + len(moved_loras) + len(missing_loras)
+    
+    logger.info(f"Total LoRAs: {len(lora_files)}, Unprocessed: {total_unprocessed}")
+    logger.info(f"New: {len(new_loras)}, Moved: {len(moved_loras)}, Missing: {len(missing_loras)}")
+    logger.info(f"Local Metadata: {local_metadata_count}, Needs Remote: {remote_metadata_needed}")
 
     response_data = {
-        "unprocessed_count": unprocessed_count,
+        "unprocessed_count": total_unprocessed,
         "new_loras": new_loras,
         "moved_loras": moved_loras,
         "duplicate_loras": duplicate_loras,
-        "missing_loras": missing_loras
+        "missing_loras": missing_loras,
+        "local_metadata": local_metadata_count,
+        "remote_metadata": remote_metadata_needed
     }
 
     LoraDataStore.set_data(response_data)
@@ -903,31 +1042,62 @@ async def get_unprocessed_count(request):
 async def estimate_processing_time(request):
     # Extract 'count' from query parameters
     params = request.rel_url.query
-    count_str = params.get('count', '0')
+    count_new_str = params.get('new', '0')
+    count_moved_str = params.get('moved', '0')
+    count_missing_str = params.get('missing', '0')
+    count_local_str = params.get('local', '0')
+    count_remote_str = params.get('remote', '0')
     
     try:
-        num_unprocessed = int(count_str)
+        num_unprocessed = int(count_new_str) + int(count_moved_str) + int(count_missing_str)
+        num_new = int(count_new_str)
+        num_moved = int(count_moved_str)
+        num_missing = int(count_missing_str)
+        num_local = int(count_local_str)
+        num_remote = int(count_remote_str)
     except ValueError:
-        logger.error(f"Invalid count parameter: {count_str}")
+        logger.error(f"Invalid count parameter: {count_new_str}")
         return web.json_response({"error": "Invalid count parameter"}, status=400)
     
     # Calculate estimated seconds
-    estimated_seconds = 1.85 * num_unprocessed  # 1.85 seconds per LoRA
+    estimated_long_seconds = 1.85 * num_remote  # 1.85 seconds per LoRA
+    estimated_short_seconds = 0.6 * num_local
+    estimated_super_short_seconds = 0.2 * num_missing
+    estimated_seconds = estimated_long_seconds + estimated_short_seconds + estimated_super_short_seconds
 
     # Determine estimated_time_minutes string
     if estimated_seconds < 60:
-        estimated_time_minutes = "Less than 1 minute"
+        estimated_time = "Less than 1 minute"
     else:
-        estimated_minutes = estimated_seconds / 60
-        estimated_time_minutes = f"{round(estimated_minutes, 2)} minute(s)"
+        # Calculate hours, minutes, and seconds
+        hours = int(estimated_seconds // 3600)
+        remaining_seconds = estimated_seconds % 3600
+        minutes = int(remaining_seconds // 60)
+        seconds = int(remaining_seconds % 60)
 
-    logger.debug(f"Estimated processing time: {estimated_seconds} seconds ({estimated_time_minutes})")
+        # Construct the formatted time string
+        time_parts = []
+        if hours > 0:
+            time_parts.append(f"{hours} hour{'s' if hours > 1 else ''}")
+        if minutes > 0:
+            time_parts.append(f"{minutes} minute{'s' if minutes > 1 else ''}")
+        if seconds > 0 or (hours == 0 and minutes == 0):
+            time_parts.append(f"{seconds} second{'s' if seconds > 1 else ''}")
+
+        estimated_time = ", ".join(time_parts)
+
+    logger.debug(f"Estimated processing time: ({estimated_time})")
 
     # Prepare and return JSON response
     return web.json_response({
         "total_unprocessed_loras": num_unprocessed,
+        "new_loras": num_new,
+        "moved_loras": num_moved,
+        "missing_loras": num_missing,
+        "local_loras": num_local,
+        "remote_loras": num_remote,
         "estimated_time_seconds": round(estimated_seconds, 2),
-        "estimated_time_minutes": estimated_time_minutes
+        "estimated_time_minutes": estimated_time
     })
 
 @PromptServer.instance.routes.get("/lora_sidebar/is_processing")
@@ -957,7 +1127,7 @@ async def process_loras(request):
         if unprocessed_info is None:
             # If not, we need to call get_unprocessed_count
             logger.info("Unprocessed data not found, calling get_unprocessed_count")
-            unprocessed_response = await get_unprocessed_count(request) # can remove later
+            unprocessed_response = await get_unprocessed_count(request) # can remove later?
             unprocessed_info = LoraDataStore.get_data()
 
         if unprocessed_info is None:
@@ -1144,6 +1314,9 @@ async def process_loras(request):
                     # Get the file path from LORA_FILE_INFO - let's add proper error handling here
                     if LORA_FILE_INFO is None:
                         raise ValueError(f"LORA_FILE_INFO is None when processing {filename}")
+                                    
+                    if LORA_FILE_INFO is not None:
+                        logger.info(f"Looking for base_filename: {base_filename}")
 
                     # Get the file path from LORA_FILE_INFO
                     lora_info = LORA_FILE_INFO.get(base_filename)
@@ -1212,11 +1385,14 @@ async def process_loras(request):
                         # Process remote images from version_info
                         remote_images = []
                         for image in version_info.get('images', []):
+                            meta = image.get('meta', {})  # Default to empty dict if None
                             remote_images.append({
                                 "url": image.get('url'),
                                 "type": image.get('type'),
                                 "nsfwLevel": image.get('nsfwLevel', 0),
-                                "hasMeta": image.get('hasMeta', False)
+                                "hasMeta": image.get('hasMeta', False),
+                                "prompt": meta.get('prompt') if meta else None,  # Guard against None
+                                "blurhash": image.get('hash')
                             })
                         
                         # Combine custom images first, then remote images
@@ -1330,6 +1506,43 @@ async def process_loras(request):
                             json.dump(info_to_save, f, indent=4)
 
                     logger.info(f"Processed {filename}")
+
+                    # Add to cache
+                    if LORA_CACHE.get('ordered_loras') is not None:
+                        info_to_save['id'] = base_filename  # Make sure ID is set
+                        info_to_save['favorite'] = base_filename in processed_loras.get('favorites', [])
+                        
+                        # Remove any existing entry first (in case of reprocessing)
+                        LORA_CACHE['ordered_loras'] = [
+                            item for item in LORA_CACHE['ordered_loras'] 
+                            if item['id'] != base_filename
+                        ]
+                        
+                        # Add new entry
+                        LORA_CACHE['ordered_loras'].append(info_to_save)
+                        
+                        # Resort if needed
+                        if len(LORA_CACHE['ordered_loras']) > 1:
+                            sort_metadata = await get_lora_sort_metadata()
+                            LORA_CACHE['ordered_loras'] = await sort_loras_with_categories(
+                                LORA_CACHE['ordered_loras'],
+                                {
+                                    'sortMethod': 'AlphaAsc',  # Default sort
+                                    'sortModels': 'None',
+                                    'tagSource': 'CivitAI',
+                                    'customTags': [],
+                                    'catNew': True
+                                },
+                                processed_loras.get('favorites', []),
+                                sort_metadata
+                            )
+                            
+                        # Update category counts
+                        manage_category_counts("calculate", 
+                            loras=LORA_CACHE['ordered_loras'],
+                            settings={'catNew': True}  # Default settings
+                        )
+
                     processed_count += 1
                     processed_loras["loras"].append({
                         "filename": base_filename,
@@ -1372,11 +1585,22 @@ async def process_loras(request):
                         with open(processed_loras_file, "r", encoding="utf-8") as f:
                             existing_data = json.load(f)
                     
-                    # Update loras list
+                    # Update loras list - remove the missing one
                     existing_data["loras"] = [
                         lora for lora in existing_data["loras"] 
                         if lora.get("filename") != missing_lora_name
                     ]
+                    
+                    # Also remove from favorites if present
+                    if missing_lora_name in existing_data.get("favorites", []):
+                        existing_data["favorites"].remove(missing_lora_name)
+                    
+                    # Update cache if it exists
+                    if LORA_CACHE.get('ordered_loras'):
+                        LORA_CACHE['ordered_loras'] = [
+                            lora for lora in LORA_CACHE['ordered_loras']
+                            if lora.get('id') != missing_lora_name
+                        ]
                     
                     # Save updated data
                     with open(processed_loras_file, "w", encoding="utf-8") as f:
@@ -1400,6 +1624,16 @@ async def process_loras(request):
     finally:
         is_processing = False  # Ensure flag is reset when processing finishes
         LoraDataStore.clear_data()
+        setting_id = "LoRA Sidebar.General.refreshAll"
+        settings = PromptServer.instance.user_manager.settings.get_settings(request)
+        settings[setting_id] = False
+        PromptServer.instance.user_manager.settings.save_settings(request, settings)
+        refresh_setting = settings.get("LoRA Sidebar.General.refreshAll")
+        logger.error(f"Current refresh setting value: {refresh_setting}")
+
+
+        # disable the refresh all setting after processing
+        #PromptServer.instance.user_manager.settings.save_settings(request, {"LoRA Sidebar.General.refreshAll": False})
 
     return web.json_response({
         "status": "Processing complete",
@@ -1411,20 +1645,41 @@ async def process_loras(request):
 
 @PromptServer.instance.routes.get("/lora_sidebar/data")
 async def get_lora_data(request):
-    logger.info("Fetching LoRA data")
-    
-    # Get offset and limit from query parameters
+    # Get request parameters
     offset = int(request.query.get('offset', 0))
-    limit = int(request.query.get('limit', 500))  # Default to 500 if not provided
-    sort_by = request.query.get('sort', 'alpha')  # sorting type
-    ascending = request.query.get('ascending', 'true').lower() == 'true'
+    limit = int(request.query.get('limit', 500))
     nsfw_folder = request.query.get('nsfw_folder', 'false').lower() == 'true'
 
-    # Get all folders first
-    all_folders = [folder for folder in os.listdir(LORA_DATA_DIR) 
-                   if os.path.isdir(os.path.join(LORA_DATA_DIR, folder))]
+    # Make sure we don't go over actual total lora size
+    #totalLoras = len(LORA_CACHE['ordered_loras'])
+    #logger.error('Initial request limit', limit)
+    #if limit > totalLoras:
+    #    limit = totalLoras - 1
+    #    logger.error('NEW request limit', limit)
     
-    lora_data = []
+    # Get settings and metadata
+    settings = get_user_settings(request)
+    sort_metadata = await get_lora_sort_metadata()
+
+    # Cache check if we need to rebuild/resort cache
+    needs_resort = False
+    needs_rebuild = False
+
+    if not LORA_CACHE.get('ordered_loras'):
+        logger.info("No cache found, will rebuild")
+        needs_rebuild = True
+    else:
+        # Check if sort settings changed
+        for key in ['sortMethod', 'sortModels', 'tagSource']:
+            if settings.get(key) != CACHE_SETTINGS.get(key):
+                logger.info(f"Sort setting changed: {key} {CACHE_SETTINGS.get(key)} -> {settings.get(key)}")
+                needs_resort = True
+                break
+                
+        # Check if custom tags changed when using custom tag source
+        if settings.get('tagSource') == 'Custom' and settings.get('customTags') != CACHE_SETTINGS.get('customTags'):
+            logger.info("Custom tags changed")
+            needs_resort = True
    
     # Load favorites
     favorites = []
@@ -1435,119 +1690,158 @@ async def get_lora_data(request):
                 processed_loras = json.load(f)
                 favorites = processed_loras.get('favorites', [])
             except json.JSONDecodeError:
-                logger.error("Error reading processed_loras.json.")
-    
-    # Get metadata for sorting
-    sort_metadata = await get_lora_sort_metadata() if sort_by in ['alpha', 'date'] else None
-    
-    # Sort the folders
-    all_folders = sort_loras(all_folders, sort_by, sort_metadata, favorites, ascending)
+                logger.error("Error reading processed_loras.json")
+        
+    if needs_rebuild:
+        lora_data = []
 
-    # Ensure favorites are prioritized only in the first batch
-    favorite_folders = []
-    non_favorite_folders = []
-
-    for folder in all_folders:
-        if folder in favorites:
-            favorite_folders.append(folder)
-        else:
-            non_favorite_folders.append(folder)
-    
-    # For the first batch (offset == 0), include the favorites
-    if offset == 0:
-        folders_to_process = favorite_folders[:limit] + non_favorite_folders[:max(0, limit - len(favorite_folders))]
-    else:
-        # For subsequent batches, only load non-favorites
-        folders_to_process = non_favorite_folders[offset - len(favorite_folders):offset + limit - len(favorite_folders)]
-
-    # Fetch data for the selected folders
-    lora_data = []
-    processed_ids = set()
-    for folder in folders_to_process:
-        if folder not in processed_ids:
+        # Load LoRA data
+        all_folders = [folder for folder in os.listdir(LORA_DATA_DIR)
+                    if os.path.isdir(os.path.join(LORA_DATA_DIR, folder))]
+                    
+        for folder in all_folders:
             info_file = os.path.join(LORA_DATA_DIR, folder, "info.json")
             if os.path.exists(info_file):
                 with open(info_file, "r", encoding="utf-8") as f:
                     try:
                         data = json.load(f)
                         data['id'] = folder
-
-                        # Add the is_new flag
-                        if sort_metadata and folder in sort_metadata:
-                            created_time = sort_metadata[folder]['ctime']
-                            # Get today and yesterday at midnight
-                            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                            yesterday = today - timedelta(days=1)
-                            # Convert timestamp to datetime
-                            created_date = datetime.fromtimestamp(created_time)
-                            data['is_new'] = created_date >= yesterday
-                            if data['is_new']:
-                                logger.info(f"LoRA {folder} marked as new")
-                        
-                         # Add NSFW folder check
+                        data['favorite'] = folder in favorites
+                    
+                        # Add NSFW folder check
                         if nsfw_folder and 'path' in data:
-                            # Case-insensitive check for 'nsfw' in path
                             path_lower = data['path'].lower()
                             if 'nsfw' in path_lower:
                                 logger.info(f"Setting NSFW flag for {folder} due to path: {data['path']}")
                                 data['nsfw'] = True
 
-                         # Get the filename and path from LORA_FILE_INFO
+                        # Get filename and path
                         if folder in LORA_FILE_INFO:
                             data['filename'] = LORA_FILE_INFO[folder]['filename']
                             data['path'] = LORA_FILE_INFO[folder]['path']
                         else:
                             data['filename'] = f"{folder}.safetensors"
                             data['path'] = ""
-
                         lora_data.append(data)
-                        processed_ids.add(folder)
                     except json.JSONDecodeError:
                         logger.error(f"Error reading {info_file}. Skipping.")
+    
+        # Pre-sort all data
+        ordered_loras = await sort_loras_with_categories(lora_data, settings, favorites, sort_metadata)
+        LORA_CACHE['ordered_loras'] = ordered_loras
+
+        # After rebuild, update cache settings
+        CACHE_SETTINGS.update({
+            'sortMethod': settings.get('sortMethod'),
+            'sortModels': settings.get('sortModels'),
+            'tagSource': settings.get('tagSource'),
+            'customTags': settings.get('customTags', []),
+            'catNew': settings.get('catNew', True)
+        })
+
+    elif needs_resort:
+        logger.info("Resorting existing cache")
+        # Just resort existing data
+        LORA_CACHE['ordered_loras'] = await sort_loras_with_categories(
+            LORA_CACHE['ordered_loras'], 
+            settings, 
+            favorites, 
+            sort_metadata
+        )
+
+        # Update cache settings
+        CACHE_SETTINGS.update({
+            'sortMethod': settings.get('sortMethod'),
+            'sortModels': settings.get('sortModels'),
+            'tagSource': settings.get('tagSource'),
+            'customTags': settings.get('customTags', []),
+            'catNew': settings.get('catNew', True)
+        })
+    
+    # Apply pagination
+    start_idx = offset
+    end_idx = offset + limit
+    paginated_loras = LORA_CACHE['ordered_loras'][start_idx:end_idx]
+
+    # Use unified category management
+    category_counts = manage_category_counts("calculate",
+        loras=LORA_CACHE['ordered_loras'],
+        paginated_loras=paginated_loras,
+        settings=settings
+    )
+
+    # Clear sent tracking on initial load
+    if offset == 0:
+        LORA_CACHE['sent_loras'] = set()
+    
+    # Track what we're sending
+    LORA_CACHE['sent_loras'].update(lora['id'] for lora in paginated_loras)
    
-    logger.info(f"Fetched data for {len(lora_data)} LoRAs (offset: {offset}, limit: {limit})")
-    
-    # Check if there are more LoRAs to load
-    has_more = (offset + limit) < len(non_favorite_folders)
-    
     return web.json_response({
-        "loras": lora_data, 
-        "favorites": favorites if offset == 0 else [],  # Send favorites only in the first batch
-        "hasMore": has_more,
-        "totalCount": len(all_folders)
+        "loras": paginated_loras,
+        "favorites": favorites if offset == 0 else [],
+        "hasMore": end_idx < len(LORA_CACHE['ordered_loras']),
+        "totalCount": len(LORA_CACHE['ordered_loras']),
+        "categoryInfo": category_counts
     })
+
 
 @PromptServer.instance.routes.post("/lora_sidebar/toggle_favorite")
 async def toggle_favorite(request):
     data = await request.json()
     lora_id = data.get('id')
-    
+    logger.info(f"Toggle favorite request for LoRA ID: {lora_id}")
+   
+    # Update processed_loras.json
     processed_loras_file = os.path.join(LORA_DATA_DIR, "processed_loras.json")
-    
     if os.path.exists(processed_loras_file):
-        with open(processed_loras_file, 'r', encoding="utf-8") as f:
+        with open(processed_loras_file, "r", encoding="utf-8") as f:
             try:
                 processed_loras = json.load(f)
             except json.JSONDecodeError:
-                logger.error("Error reading processed_loras.json. Initializing.")
                 processed_loras = {"favorites": []}
     else:
         processed_loras = {"favorites": []}
-    
+   
     if 'favorites' not in processed_loras:
         processed_loras['favorites'] = []
-    
-    if lora_id in processed_loras['favorites']:
+   
+    # Toggle status
+    is_favorite = lora_id in processed_loras['favorites']
+    logger.info(f"LoRA current favorite status: {is_favorite}")
+   
+    if is_favorite:
         processed_loras['favorites'].remove(lora_id)
-        is_favorite = False
+        logger.info(f"Removed {lora_id} from favorites")
     else:
         processed_loras['favorites'].append(lora_id)
-        is_favorite = True
-    
+        logger.info(f"Added {lora_id} to favorites")
+
+    # Get the lora's current category before updating
+    old_category = None
+    new_category = None
+    if LORA_CACHE['ordered_loras']:
+        for lora in LORA_CACHE['ordered_loras']:
+            if lora['id'] == lora_id:
+                old_category = 'Favorites' if is_favorite else lora['category']
+                new_category = lora['category'] if is_favorite else 'Favorites'
+                lora['favorite'] = not is_favorite
+                break
+
+    # Update category counts
+    category_info = manage_category_counts("update",
+        old_category=old_category,
+        new_category=new_category
+    )
+   
+    # Save persistent data
     with open(processed_loras_file, 'w', encoding="utf-8") as f:
         json.dump(processed_loras, f, indent=4)
-    
-    return web.json_response({"favorite": is_favorite})
+   
+    return web.json_response({
+        "status": "success",
+        "categoryInfo": category_info
+    })
 
 @PromptServer.instance.routes.post("/lora_sidebar/set_preview")
 async def set_preview_image(request):
@@ -1752,11 +2046,14 @@ async def refresh_lora(request):
             # Handle remote images
             new_remote_images = []
             for image in version_info.get('images', []):
+                meta = image.get('meta', {})
                 image_data = {
                     "url": image.get('url'),
                     "type": image.get('type'),
                     "nsfwLevel": image.get('nsfwLevel', 0),
-                    "hasMeta": image.get('hasMeta', False)
+                    "hasMeta": image.get('hasMeta', False),
+                    "prompt": meta.get('prompt') if meta else None,
+                    "blurhash": image.get('hash')
                 }
                 if image_data['url']:
                     new_remote_images.append(image_data)
@@ -1836,6 +2133,13 @@ async def refresh_lora(request):
                 info_file_path = os.path.join(existing_lora_folder, "info.json")
                 with open(info_file_path, "w", encoding="utf-8") as f:
                     json.dump(ordered_info, f, indent=4, ensure_ascii=False)
+
+                # Update the cache using base_filename
+                if LORA_CACHE.get('ordered_loras'):
+                    for item in LORA_CACHE['ordered_loras']:
+                        if item['id'] == base_filename:
+                            item.update(ordered_info)
+                            break
 
                 return web.json_response({
                     "status": "success", 
@@ -2240,6 +2544,325 @@ async def delete_lora(request):
     except Exception as e:
         logger.error(f"Error deleting LoRA {lora_id}: {str(e)}")
         return web.json_response({"status": "error", "message": f"Failed to delete LoRA: {str(e)}"}, status=500)
+
+@PromptServer.instance.routes.post("/lora_sidebar/set_version")
+async def set_processed_version(request):
+    try:
+        # Get the version we should set (true = 1, false = current version)
+        data = await request.json()
+        use_old_version = data.get('use_old_version', False)
+        
+        processed_loras_file = os.path.join(LORA_DATA_DIR, "processed_loras.json")
+        
+        # Initialize with default structure if file doesn't exist
+        if not os.path.exists(processed_loras_file):
+            processed_loras = {
+                "version": PROCESSED_LORAS_VERSION if not use_old_version else 1,
+                "loras": [],
+                "favorites": []
+            }
+        else:
+            # Read existing data
+            with open(processed_loras_file, 'r', encoding='utf-8') as f:
+                processed_loras = json.load(f)
+                
+            # Only update the version field
+            processed_loras['version'] = 1 if use_old_version else PROCESSED_LORAS_VERSION
+        
+        # Write back the modified data
+        with open(processed_loras_file, 'w', encoding='utf-8') as f:
+            json.dump(processed_loras, f, indent=4, ensure_ascii=False)
+        
+        return web.json_response({
+            "status": "success",
+            "version": processed_loras['version']
+        })
+        
+    except Exception as e:
+        logger.error(f"Error setting processed version: {str(e)}")
+        return web.json_response({
+            "status": "error",
+            "message": str(e)
+        }, status=500)
+    
+#####    
+##### DATA REWRITE DANERGOUS STUFF #####
+#####
+
+def get_user_settings(request):
+    """Get user settings using AppSettings."""
+    try:
+        # Get settings from app_settings using the user manager
+        settings = PromptServer.instance.user_manager.settings.get_settings(request)
+        
+        return {
+            'sortMethod': settings.get("LoRA Sidebar.General.sortMethod", 'AlphaAsc'),
+            'sortModels': settings.get("LoRA Sidebar.General.sortModels", 'None'),
+            'tagSource': settings.get("LoRA Sidebar.General.tagSource", 'CivitAI'),
+            'customTags': settings.get("LoRA Sidebar.General.customTags", "").split(','),
+            'catNew': settings.get("LoRA Sidebar.General.catNew", True)
+        }
+    except Exception as e:
+        logger.error(f"Error getting user settings: {str(e)}")
+        # Fallback to defaults
+        return {
+            'sortMethod': 'AlphaAsc',
+            'sortModels': 'None',
+            'tagSource': 'CivitAI',
+            'customTags': [],
+            'catNew': True
+        }
+
+async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
+    """
+    Process loras with their real categories and status flags.
+    """
+    for lora in loras:
+        # Set status flags
+        lora['favorite'] = lora['id'] in favorites
+        
+        # Calculate new status
+        creation_date = None
+        if lora.get('createdDate'):
+            try:
+                creation_date = datetime.strptime(lora['createdDate'], '%Y-%m-%d')
+                logger.info(f"LoRA {lora['name']} using metadata date: {creation_date}")
+            except ValueError:
+                logger.error(f"Failed to parse createdDate for {lora['name']}: {lora.get('createdDate')}")
+                creation_date = None
+        
+        if creation_date is None:
+            if sort_metadata and lora['id'] in sort_metadata:
+                creation_date = datetime.fromtimestamp(sort_metadata[lora['id']]['ctime'])
+            else:
+                creation_date = datetime.now()
+        
+        lora['created_time'] = creation_date.timestamp()
+        hours_ago = datetime.now() - timedelta(hours=NEW_ITEM_HOURS)
+        lora['is_new'] = creation_date >= hours_ago
+
+        # Assign real category
+        if settings['sortModels'] == 'Tags':
+            category = 'Unsorted'
+            if lora.get('tags'):
+                for tag in get_tag_categories(settings):
+                    if tag in lora['tags']:
+                        category = tag
+                        break
+            lora['category'] = category
+        elif settings['sortModels'] == 'Subdir':
+            lora['category'] = lora.get('subdir', '').split('\\')[-1] or 'Unsorted'
+        else:
+            lora['category'] = 'All LoRAs'
+
+    # Define sort key function
+    def sort_key(lora):
+        if settings['sortMethod'] == 'AlphaAsc':
+            return lora.get('name', '').lower()
+        elif settings['sortMethod'] == 'AlphaDesc':
+            return -ord(lora.get('name', '')[0].lower()) if lora.get('name') else 'z'
+        elif settings['sortMethod'] == 'DateNewest':
+            try:
+                return -datetime.strptime(lora.get('createdDate', '1970-01-01'), '%Y-%m-%d').timestamp()
+            except:
+                return 0
+        else:  # DateOldest
+            try:
+                return datetime.strptime(lora.get('createdDate', '1970-01-01'), '%Y-%m-%d').timestamp()
+            except:
+                return 0
+
+    # Sort based on settings
+    loras = sorted(loras, key=sort_key)
+
+    # Order items for initial data packet (favorites/new first)
+    favorites_list = [lora for lora in loras if lora['favorite']]
+    new_items = []
+    if settings['catNew']:
+        new_items = [
+            lora for lora in loras 
+            if not lora['favorite'] and lora['is_new']
+        ]
+    
+    remaining_loras = [
+        lora for lora in loras 
+        if not lora['favorite'] and 
+        (not lora['is_new'] or not settings['catNew'])
+    ]
+
+    return favorites_list + new_items + remaining_loras
+
+def show_build_progress(current, total, prefix='\033[1;34m[LoRA Sidebar]:\033[0m Building LoRA cache', width=50):
+    """
+    Show a colorized progress bar with item count and percentage.
+    """
+    try:
+        percent = float(current) * 100 / total
+        filled = int(width * current / total)
+        bar = (f"{ANSI_COLORS['CYAN']}{'█' * filled}"
+               f"{ANSI_COLORS['BLUE']}{'▒' * (width - filled)}"
+               f"{ANSI_COLORS['ENDC']}")
+        
+        status = (f"\r{ANSI_COLORS['BOLD']}{prefix}{ANSI_COLORS['ENDC']} "
+                 f"|{bar}| "
+                 f"{ANSI_COLORS['GREEN']}{percent:>5.1f}%{ANSI_COLORS['ENDC']} "
+                 f"({current}/{total})")
+        
+        print(status, end='')
+        if current == total:
+            print(f"\n\033[1;34m[LoRA Sidebar]:\033[0m {ANSI_COLORS['GREEN']}Cache build complete!{ANSI_COLORS['ENDC']}")
+            
+    except Exception:
+        # Fallback to basic progress in case of any issues with colors
+        print(f"\rBuilding cache: {current}/{total}", end='')
+
+async def build_initial_cache():
+    """
+    Build the initial LoRA cache on startup using processed_loras.json.
+    """
+    logger.info("Starting initial LoRA cache build...")
+    start_time = datetime.now()
+    total_loras = 0
+    PLUGIN_PREFIX = "\033[1;34m[LoRA Sidebar]:\033[0m "
+    
+    try:
+        # Load processed_loras.json first
+        processed_loras_file = os.path.join(LORA_DATA_DIR, "processed_loras.json")
+        if not os.path.exists(processed_loras_file):
+            logger.warning("No processed_loras.json found - cache will be built on first /data request")
+            print(f"\n{PLUGIN_PREFIX}{ANSI_COLORS['YELLOW']}{get_completion_message(0)}{ANSI_COLORS['ENDC']}")
+            return
+
+        with open(processed_loras_file, "r", encoding="utf-8") as f:
+            try:
+                processed_loras = json.load(f)
+                if not isinstance(processed_loras, dict):
+                    logger.warning("Invalid processed_loras.json format")
+                    return
+            except json.JSONDecodeError:
+                logger.error("Error reading processed_loras.json")
+                return
+
+        # Get favorites list
+        favorites = processed_loras.get('favorites', [])
+        lora_entries = processed_loras.get('loras', [])
+        
+        if not lora_entries:
+            logger.warning("No processed LoRAs found")
+            print(f"\n{PLUGIN_PREFIX}{ANSI_COLORS['YELLOW']}{get_completion_message(0)}{ANSI_COLORS['ENDC']}")
+            return
+
+        total_loras = len(lora_entries)
+        processed = 0
+        lora_data = []
+
+        # Default settings for initial sort
+        default_settings = {
+            'sortMethod': 'AlphaAsc',
+            'sortModels': 'None',
+            'tagSource': 'CivitAI',
+            'customTags': [],
+            'catNew': True
+        }
+
+        # Process each LoRA from processed_loras.json
+        for lora_entry in lora_entries:
+            base_filename = lora_entry.get('filename')
+            if not base_filename:
+                continue
+
+            info_file = os.path.join(LORA_DATA_DIR, base_filename, "info.json")
+            if os.path.exists(info_file):
+                with open(info_file, "r", encoding="utf-8") as f:
+                    try:
+                        data = json.load(f)
+                        data['id'] = base_filename
+                        data['favorite'] = base_filename in favorites
+                        data['filename'] = base_filename
+                        data['path'] = lora_entry.get('path', '')
+                        lora_data.append(data)
+                    except json.JSONDecodeError:
+                        logger.error(f"Error reading {info_file}")
+
+            processed += 1
+            show_build_progress(processed, total_loras)
+
+        # Sort and store in cache
+        if lora_data:
+            sort_metadata = await get_lora_sort_metadata()
+            LORA_CACHE['ordered_loras'] = await sort_loras_with_categories(
+                lora_data, default_settings, favorites, sort_metadata
+            )
+            LORA_CACHE['sent_loras'] = set()  # Reset sent tracking
+            
+            # Calculate initial category counts
+            manage_category_counts("calculate",
+                loras=LORA_CACHE['ordered_loras'],
+                settings=default_settings
+            )
+
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        logger.info(f"LoRA cache built successfully in {duration:.2f} seconds")
+        print(f"{PLUGIN_PREFIX}LoRA cache built in{ANSI_COLORS['CYAN']} {duration:.2f} seconds{ANSI_COLORS['ENDC']}")
+        print(f"{PLUGIN_PREFIX}Total LoRAs processed:{ANSI_COLORS['BOLD']} {total_loras}{ANSI_COLORS['ENDC']}")
+        print(f"{PLUGIN_PREFIX}{ANSI_COLORS['BOLD']}{ANSI_COLORS['YELLOW']}{get_completion_message(total_loras)}{ANSI_COLORS['ENDC']}\n")
+
+    except Exception as e:
+        logger.error(f"Error building initial cache: {str(e)}")
+        print(f"\n{ANSI_COLORS['RED']}Error building cache: {str(e)}{ANSI_COLORS['ENDC']}")
+
+@PromptServer.instance.routes.get("/lora_sidebar/category/{category_name}")
+async def get_category_items(request):
+    category_name = request.match_info['category_name']
+    limit = int(request.query.get('limit', 500))
+   
+    if not LORA_CACHE['ordered_loras']:
+        return web.json_response({"error": "No LoRA data loaded"}, status=400)
+       
+    # Get all items for this category
+    category_items = [
+        lora for lora in LORA_CACHE['ordered_loras']
+        if lora['category'] == category_name and not lora.get('favorite', False) and not lora.get('is_new', False)
+    ]
+
+    # Check for any unsent items
+    unsent_items = [
+        lora for lora in category_items 
+        if lora['id'] not in LORA_CACHE['sent_loras']
+    ]
+
+    # Get all category IDs
+    category_ids = [lora['id'] for lora in category_items]
+
+    response_data = {
+        "category_ids": category_ids,
+        "total": len(category_items)
+    }
+
+    # If we found any unsent items, include them too
+    if unsent_items:
+        items_to_send = unsent_items[:limit]
+        LORA_CACHE['sent_loras'].update(lora['id'] for lora in items_to_send)
+        response_data["items"] = items_to_send
+        response_data["hasMore"] = len(unsent_items) > len(items_to_send)
+        print(f"Category {category_name}: Found {len(items_to_send)} unsent items")
+
+    return web.json_response(response_data)
+
+##### Initial loading stuff
+
+print(f"\n\033[1;34m[LoRA Sidebar]:\033[0m Starting initial cache build...")
+
+# Create and run a new event loop to execute our async cache builder
+try:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(build_initial_cache())
+    loop.close()
+except Exception as e:
+    print(f"\033[91m[LoRA Sidebar]: Error building cache: {str(e)}\033[0m")
+
 
 
 NODE_CLASS_MAPPINGS = {}

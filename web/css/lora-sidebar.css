@@ -189,23 +189,52 @@
 }
 
 .model-info-popup .close-button {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    background: none;
+    position: sticky;
+    top: 0;
+    right: 0;
+    float: right;
+    background: rgba(34, 34, 34, 0.9); /* Match popup background with some opacity */
     border: none;
     color: #fff;
     font-size: 20px;
     cursor: pointer;
-    z-index: 2;
+    z-index: 1100;
+    padding: 5px 10px;
+    margin: -10px -10px 0 0; /* Negative margin to offset parent padding */
+    border-radius: 0 5px 0 5px; /* Round bottom-left corner only */
+    transition: background-color 0.2s ease;
 }
 
-.image-popup .close-button:hover {
-    background: rgba(88, 88, 88, 0.8);
+.model-info-popup .close-button:hover {
+    background-color: rgba(68, 68, 68, 0.9);
+}
+
+/* Add a subtle shadow to help it stand out */
+.model-info-popup .close-button::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(rgba(0, 0, 0, 0.2), transparent);
 }
 
 .model-info-popup .popup-content {
     margin-top: 20px;
+}
+
+.info-top-row {
+    padding: 0 2px;
+}
+
+.favorite-toggle {
+    padding: 5px;  /* Add some padding for better click target */
+    transition: transform 0.2s ease;
+}
+
+.favorite-toggle:hover {
+    transform: scale(1.1);
 }
 
 .model-info-popup .civitai-link {
@@ -254,10 +283,18 @@
 .model-info-popup .media-controls {
     position: absolute;
     top: 10px;
-    right: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 5px;
+    z-index: 3;
+}
+
+.model-info-popup .media-controls-left,
+.model-info-popup .media-controls-right {
     display: flex;
     gap: 5px;
-    z-index: 3;
 }
 
 .model-info-popup .media-control-button {
@@ -369,6 +406,74 @@
     right: 20px;
 }
 
+.popup-prompt-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8) 20%);
+    padding: 20px 20px 25px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.popup-prompt-content {
+    flex: 1;
+    color: white;
+    font-family: monospace;
+    font-size: clamp(9px, 1vw, 14px);  /* Responsive font size with min/max */
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-height: 20vh;  /* Limit height to 20% of viewport height */
+    user-select: text;
+}
+
+.popup-prompt-copy {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.popup-prompt-copy:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.image-info-popup {
+    position: absolute;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 10px;
+    max-width: 300px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1002;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    color: #fff;
+    font-size: 0.9em;
+    word-wrap: break-word;
+}
+
+.image-info-content {
+    white-space: pre-wrap;
+    font-family: monospace;
+    line-height: 1.4;
+}
+
 .model-info-popup .button-row {
     display: flex;
     gap: 10px;
@@ -426,6 +531,10 @@
 
 .model-info-popup .info-button.icon-button.delete-button {
     background-color: #ff4444;
+}
+
+.model-info-popup .info-button.icon-button.refresh-button {
+    background-color: #0033ff;
 }
 
 .model-info-popup .delete-button:hover {
