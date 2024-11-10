@@ -890,11 +890,11 @@ class LoraSidebar {
         try {
             // Reduce count to total loras we're dealing with
             let totalLoras = this.filteredData.length
-            console.error("Total Loras:",totalLoras);
-            console.error("Count:",count);
+            debug.log("Total Loras:",totalLoras);
+            debug.log("Count:",count);
             if (count > totalLoras) {
                 count = totalLoras;
-                console.error("Batch larger than LoRA list, setting size to",count);
+                debug.log("Batch larger than LoRA list, setting size to",count);
             }
     
             if (startIndex === 0) {
@@ -1785,7 +1785,7 @@ class LoraSidebar {
     
             // Now that we have the versionId, proceed to refresh with /refresh/{version_id}
             debug.log(`Refreshing LoRA with version ID: ${versionId}`);
-            console.error("Looking for LoRA:", {
+            debug.log("Looking for LoRA:", {
                 searchVersionId: versionId,
                 searchId: lora.id,
                 matchingLoras: this.loraData.filter(l => 
@@ -2151,10 +2151,10 @@ class LoraSidebar {
             }
 
         } else if (node.type === "Power Lora Loader (rgthree)") {
-            console.error("Starting update with data:", loraData);
+            debug.log("Starting update with data:", loraData);
         
             const widget = node.addNewLoraWidget();
-            console.error("Created widget:", widget);
+            debug.log("Created widget:", widget);
     
             const weight = loraData.reco_weight ?? 1;
             const loraPath = `${loraData.subdir}${loraData.subdir ? '\\' : ''}${filename}`;

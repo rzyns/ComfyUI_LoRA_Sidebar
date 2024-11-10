@@ -1629,7 +1629,7 @@ async def process_loras(request):
         settings[setting_id] = False
         PromptServer.instance.user_manager.settings.save_settings(request, settings)
         refresh_setting = settings.get("LoRA Sidebar.General.refreshAll")
-        logger.error(f"Current refresh setting value: {refresh_setting}")
+        logger.info(f"Current refresh setting value: {refresh_setting}")
 
 
         # disable the refresh all setting after processing
