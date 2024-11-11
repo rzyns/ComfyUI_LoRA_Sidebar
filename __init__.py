@@ -2672,9 +2672,9 @@ async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
     # Define sort key function
     def sort_key(lora):
         if settings['sortMethod'] == 'AlphaAsc':
-            return lora.get('name', '').lower()
+            return (lora.get('name') or 'zzz').lower() # using zzz so these will sort at the end
         elif settings['sortMethod'] == 'AlphaDesc':
-            return -ord(lora.get('name', '')[0].lower()) if lora.get('name') else 'z'
+            return -ord((lora.get('name') or '___')[0].lower()) # again using this so our bad loras are at the bottom
         elif settings['sortMethod'] == 'DateNewest':
             try:
                 return -datetime.strptime(lora.get('createdDate', '1970-01-01'), '%Y-%m-%d').timestamp()
