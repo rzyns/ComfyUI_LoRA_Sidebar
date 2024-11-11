@@ -79,9 +79,6 @@ This plugin has a host of settings to customize the appearence and sorting. Sett
 ![image](https://github.com/user-attachments/assets/9c3fd7bf-5dff-4207-b193-369c9c0a3ac5)
 
 ## Limitations
-- Drag and drop only supports core Comfy nodes, if you have some custom nodes you use please open an issue and I can add support for whatever
-- Sorting does make the sidebar perform worse than with sorting off, it's not really noticable unless you have a lot of LoRAs though
-- Sometimes with large LoRA libraries the sidebar won't initially load everything right, closing and reopening it fixes it (or hitting the X button on the search box) - this doesn't affect searching at all
 - Sliders don't really look great and they don't use the right node. If you have sliders and use them frequently I strongly suggest looking into my Slider Sidebar - https://github.com/Kinglord/ComfyUI_Slider_Sidebar
 - This isn't a LoRA management tool so it's not made to help you manage your LoRA files
 - With large datasets it can cause some timeouts, they are harmless but they do clutter the server logs a bit
@@ -96,9 +93,9 @@ This plugin has a host of settings to customize the appearence and sorting. Sett
 
 ## Roadmap
 - [ ] Custom category sorting
-- [ ] Look into fixing timeouts with large datasets so the server logs don't get spammed
-- [ ] Investigate some ways to improve performance when using categories
 - [ ] Whatever bugs you find / features you submit
+- [ ] Look into fixing timeouts with large datasets so the server logs don't get spammed (some of these have been fixed but there is still some websocket spam)
+- [X] Investigate some ways to improve performance when using categories
 - [X] Adding support for more LoRA nodes outside of ComfyUI Core - (rgthree for now)
 - [X] Support A1111 style LoRA promopting
 - [X] Support searching by model type (LoRA or Lycoris)
