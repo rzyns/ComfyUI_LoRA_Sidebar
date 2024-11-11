@@ -309,9 +309,10 @@ async def check_local_info(file_path):
     logger.info(f"No valid metadata found for: {file_path}")
     return False
 
-async def fetch_model_info(session, model_id):
+async def fetch_model_info(session, model_id, skip_rate_limit=False):
     url = f"https://civitai.com/api/v1/models/{model_id}"
-    await RATE_LIMITER.acquire()  # Enforce rate limit
+    if not skip_rate_limit:
+        await RATE_LIMITER.acquire()
     async with session.get(url) as response:
         if response.status == 200:
             return await response.json()
@@ -336,9 +337,10 @@ async def fetch_version_info(session, file_hash):
     
     return None
 
-async def fetch_version_info_by_id(session, version_id):
+async def fetch_version_info_by_id(session, version_id, skip_rate_limit=False):
     url = f"https://civitai.com/api/v1/model-versions/{version_id}"
-    await RATE_LIMITER.acquire()  # Enforce rate limit
+    if not skip_rate_limit:
+        await RATE_LIMITER.acquire()
     async with session.get(url) as response:
         if response.status == 200:
             return await response.json()
@@ -661,6 +663,7 @@ def manage_category_counts(action="calculate", **kwargs):
 
     # Update cache and return
     LORA_CACHE['category_info'] = category_counts
+    logger.debug(f"cat counts from category counter: {category_counts}")
     return category_counts
 
 def validate_processed_loras(processed_loras):
@@ -719,7 +722,8 @@ def get_completion_message(lora_count):
         500: [
             "Impressive arsenal of LoRAs! You're a serious collector. 🥃",
             "Your LoRA collection is becoming a force to be reckoned with! 💪",
-            "Triple digits! Now that's dedication...or something else... 💦"
+            "Triple digits! Now that's dedication...or something else... 💦",
+            "Are ya winning, son? 🤠"
         ],
         2000: [
             "This collection is getting scary! 😱",
@@ -728,7 +732,7 @@ def get_completion_message(lora_count):
             "I know, you can stop anytime you want. 🚬"
         ],
         9000: [
-            "WHAT?! IT'S OVER 9️⃣0️⃣0️⃣0️⃣!!!",
+            "WHAT?! IT'S OVER 9000!!! 🤯",
             "They said they had a lot of LoRAs. You said, Hold my beer. 🍺",
             "Behold, a true LoRA connoisseur walks among us! ಠ_ರೃ",
             "You don't remember downloading half of these, do you? 🤔"
@@ -1994,7 +1998,7 @@ async def refresh_lora(request):
                     if remote_info and remote_info.get('images'):
                         version_info['images'] = remote_info['images']
             else:
-                version_info = await fetch_version_info_by_id(session, version_id)
+                version_info = await fetch_version_info_by_id(session, version_id, skip_rate_limit=True)
 
             # Initialize updates dictionary
             updates = {}
@@ -2005,7 +2009,7 @@ async def refresh_lora(request):
             # Only fetch model info if we need it and aren't using local metadata
             if model_id and not existing_info.get("local_metadata"):
                 logger.info(f"Fetching model info for model ID: {model_id}")
-                model_info = await fetch_model_info(session, model_id)
+                model_info = await fetch_model_info(session, model_id, skip_rate_limit=True)
                 if model_info:
                     # Only update non-user-edited fields
                     if 'tags' not in user_edits and model_info.get('tags'):
@@ -2024,14 +2028,19 @@ async def refresh_lora(request):
 
                 if 'trained_words' not in user_edits:
                     new_trained_words = version_info.get('trainedWords', existing_info.get('trained_words'))
-                    if new_trained_words:
-                        if isinstance(new_trained_words, str):
-                            new_trained_words = [word.strip() for word in new_trained_words.split(',') if word.strip()]
-                        elif isinstance(new_trained_words, list):
-                            new_trained_words = [str(word).strip() for word in new_trained_words]
-                        
-                        if new_trained_words != existing_info.get('trained_words'):
-                            updates['trained_words'] = new_trained_words
+                    if new_trained_words and new_trained_words != existing_info.get('trained_words'):
+                        if isinstance(new_trained_words, list):
+                            if len(new_trained_words) == 1 and ',' in new_trained_words[0]:
+                                # Split single entry with commas into multiple words
+                                updates['trained_words'] = [word.strip() for word in new_trained_words[0].split(',') if word.strip()]
+                            else:
+                                # Already a proper list format, use as-is
+                                updates['trained_words'] = new_trained_words
+                        elif isinstance(new_trained_words, str):
+                            # Single string - split it
+                            updates['trained_words'] = [word.strip() for word in new_trained_words.split(',') if word.strip()]
+                        else:
+                            updates['trained_words'] = []
 
                 if 'baseModel' not in user_edits:
                     new_base_model = version_info.get('baseModel')
@@ -2140,11 +2149,16 @@ async def refresh_lora(request):
                         if item['id'] == base_filename:
                             item.update(ordered_info)
                             break
+                
+                category_info = manage_category_counts("calculate",
+                    loras=LORA_CACHE['ordered_loras'],
+                )
 
                 return web.json_response({
                     "status": "success", 
                     "data": existing_info,
-                    "updated_fields": list(updates.keys())
+                    "updated_fields": list(updates.keys()),
+                    "categoryInfo": category_info
                 })
             else:
                 logger.info(f"No updates required for LoRA with version ID {version_id}.")

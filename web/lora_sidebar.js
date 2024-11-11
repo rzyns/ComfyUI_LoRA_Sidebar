@@ -1345,6 +1345,14 @@ class LoraSidebar {
             // Get counts from category info
             let totalCount = this.categoryInfo?.[categoryName]?.total || loras.length;
             let loadedCount = loras.length;
+
+            // Add debug logs to see what we're getting
+            debug.log(`Creating category ${categoryName}:`, {
+                categoryInfo: this.categoryInfo?.[categoryName],
+                lorasLength: loras.length,
+                totalFromInfo: this.categoryInfo?.[categoryName]?.total,
+                totalCount: totalCount,
+            });
             
             header = $el("div.category-header", {
                 draggable: false
@@ -1822,6 +1830,10 @@ class LoraSidebar {
                         this.loraData[index] = { ...this.loraData[index], ...updatedLoraData };
                         debug.log("Merged LoRA Data:", this.loraData[index]);
                         this.filteredData = [...this.loraData];
+                        // check for categoryInfo
+                        if (result.categoryInfo) {
+                            this.categoryInfo = result.categoryInfo;
+                        }
                         this.handleSearch(this.state.searchTerm || '');
                         app.extensionManager.toast.add({
                             severity: "success",
@@ -2215,6 +2227,25 @@ class LoraSidebar {
     
         // Create the content container
         const contentContainer = $el("div.popup-content");
+
+        // Add drag area as first child of content container
+        contentContainer.appendChild($el("div.popup-drag-area", {
+            draggable: true,
+            ondragstart: (e) => {
+                const dragData = JSON.stringify({
+                    type: "comfy-lora",
+                    id: lora.id
+                });
+                e.dataTransfer.setData("application/json", dragData);
+                const img = document.querySelector(`.lora-item img[src*="${encodeURIComponent(lora.id)}"]`);
+                if (img) {
+                    e.dataTransfer.setDragImage(img, img.width / 2, img.height / 2);
+                }
+        
+                // Let your existing handlers take care of everything else
+                this.handleDragStart(e);
+            }
+        }));
 
         // Function to update media content
         const updateMediaContent = (updatedLora) => {
@@ -3154,8 +3185,7 @@ class LoraSidebar {
         updateMediaContent(lora);
         
         // Fetch images if needed
-        fetchImagesIfNeeded();
-
+        fetchImagesIfNeeded();        
         // Append the close button and content container to popup
         popup.appendChild(closeButton);
         popup.appendChild(contentContainer);

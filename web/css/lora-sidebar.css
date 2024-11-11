@@ -221,11 +221,59 @@
 }
 
 .model-info-popup .popup-content {
-    margin-top: 20px;
+    position: relative;
+    margin-top: 8px;
+    z-index: 1;
 }
 
 .info-top-row {
     padding: 0 2px;
+}
+
+.model-info-popup .popup-drag-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;  /* Place it above other content */
+    cursor: grab;
+    background: transparent;
+    pointer-events: auto;  /* Make it catch drag events */
+}
+
+/* Make interactive elements pierce through the drag area */
+.model-info-popup .button-row,
+.model-info-popup .word-pills,
+.model-info-popup .label-pills,
+.model-info-popup .info-button,
+.model-info-popup .favorite-toggle,
+.model-info-popup .description-icon,
+.model-info-popup .media-container,
+.model-info-popup input,
+.model-info-popup .close-button,
+.model-info-popup .civitai-link,
+.model-info-popup .lora-name,
+.model-info-popup .version-desc,
+.model-info-popup .weight-edit-icon,
+.model-info-popup .weight-save-icon,
+.model-info-popup .copy-all-button,
+.model-info-popup .weight-input,
+.model-info-popup .weight-display {
+    position: relative;
+    z-index: 3;
+    pointer-events: auto;
+}
+
+/* Make text selectable where needed */
+.model-info-popup .lora-name,
+.model-info-popup .version-desc {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
 }
 
 .favorite-toggle {
