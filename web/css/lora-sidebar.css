@@ -198,6 +198,7 @@
     color: #fff;
     font-size: 20px;
     cursor: pointer;
+    pointer-events: auto;
     z-index: 1100;
     padding: 5px 10px;
     margin: -10px -10px 0 0; /* Negative margin to offset parent padding */
@@ -253,7 +254,6 @@
 .model-info-popup .description-icon,
 .model-info-popup .media-container,
 .model-info-popup input,
-.model-info-popup .close-button,
 .model-info-popup .civitai-link,
 .model-info-popup .lora-name,
 .model-info-popup .version-desc,
@@ -261,6 +261,9 @@
 .model-info-popup .weight-save-icon,
 .model-info-popup .copy-all-button,
 .model-info-popup .weight-input,
+.model-info-popup .expand-desc-button,
+.model-info-popup .version-desc-container,
+.model-info-popup .version-desc,
 .model-info-popup .weight-display {
     position: relative;
     z-index: 3;
@@ -274,6 +277,14 @@
     -webkit-user-select: text;
     -moz-user-select: text;
     -ms-user-select: text;
+}
+
+/* Ensure scrollbar is accessible */
+.model-info-popup .version-desc-container::-webkit-scrollbar,
+.model-info-popup .version-desc-container::-webkit-scrollbar-thumb {
+    position: relative;
+    z-index: 3;
+    pointer-events: auto;
 }
 
 .favorite-toggle {

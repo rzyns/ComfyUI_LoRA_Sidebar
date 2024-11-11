@@ -1347,7 +1347,7 @@ async def process_loras(request):
                     if version_info:
                         # Prepare data to save
                         info_to_save = {
-                            "name": version_info.get('model', {}).get('name', filename),
+                            "name": (version_info.get('model', {}).get('name') or version_info.get('name') or filename),
                             "modelId": version_info.get('modelId'),
                             "versionId": version_info.get('id'),
                             "versionName": version_info.get('name'),
@@ -1361,7 +1361,7 @@ async def process_loras(request):
                             "reco_weight": 1,
                             "model_desc": version_info.get('model', {}).get('description'),
                             "type": version_info.get('model', {}).get('type'),
-                            "createdDate": format_date(version_info.get('createdAt')),
+                            "createdDate": format_date(version_info.get('createdAt')) or datetime.now().strftime('%Y-%m-%d'),
                             "updatedDate": format_date(version_info.get('updatedAt')),
                             "subdir": subdir,
                             "path": file_path,
@@ -2672,19 +2672,23 @@ async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
     # Define sort key function
     def sort_key(lora):
         if settings['sortMethod'] == 'AlphaAsc':
-            return (lora.get('name') or 'zzz').lower() # using zzz so these will sort at the end
+            name = lora.get('name', lora.get('filename', 'zzz')) # using zzz so these will sort at the end
+            return name.lower()
         elif settings['sortMethod'] == 'AlphaDesc':
-            return -ord((lora.get('name') or '___')[0].lower()) # again using this so our bad loras are at the bottom
+            name = lora.get('name', lora.get('filename', '___')) # again using this so our bad loras are at the bottom
+            return -ord(name[0].lower()) 
         elif settings['sortMethod'] == 'DateNewest':
             try:
-                return -datetime.strptime(lora.get('createdDate', '1970-01-01'), '%Y-%m-%d').timestamp()
-            except:
-                return 0
+                date_str = lora.get('createdDate', '1970-01-01')
+                return -datetime.strptime(date_str, '%Y-%m-%d').timestamp()
+            except (ValueError, TypeError):
+                return float('inf')  # Will sort to bottom since we're using negative timestamps
         else:  # DateOldest
             try:
-                return datetime.strptime(lora.get('createdDate', '1970-01-01'), '%Y-%m-%d').timestamp()
-            except:
-                return 0
+                date_str = lora.get('createdDate', '1970-01-01')
+                return datetime.strptime(date_str, '%Y-%m-%d').timestamp()
+            except (ValueError, TypeError):
+                return float('inf')  # Sort to end if date parsing fails
 
     # Sort based on settings
     loras = sorted(loras, key=sort_key)
