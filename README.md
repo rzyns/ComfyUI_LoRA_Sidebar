@@ -6,6 +6,11 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
 ## Updates
+#### 11/11/24
+- New visual loading indicator with some info tips
+- Rewrote handling of files with bad or missing data, much more robust
+- Improved sorting across the board, works like you'd expect it to now without refreshes 🍾
+- Lots of small tweaks and enchancements around not needing to reload the sidebar
 #### 11/09/24
 - Huge update that touched almost every part of the sidebar
 - Too many UX improvements to mention, tl;dr lora-info pop-up feels like new
