@@ -19,6 +19,7 @@ import sys
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 import random
+from dateutil import parser
 
 
 # Set up logging
@@ -58,7 +59,8 @@ TEST_LIMIT = 0
 is_processing = False
 
 PROCESSED_LORAS_VERSION = 2  # used to force reprocessing LoRAs when data files change
-NEW_ITEM_HOURS = 48
+NEW_ITEM_HOURS = 72
+FALLBACK_TIMESTAMP = datetime(2100, 1, 1).timestamp()
 LORA_FILE_INFO = {}
 
 # Cache data for faster performance with new sorting
@@ -1111,7 +1113,17 @@ async def is_processing_handler(request):
 
 @PromptServer.instance.routes.get("/lora_sidebar/process")
 async def process_loras(request):
-    global is_processing, LORA_FILE_INFO
+    global is_processing, LORA_FILE_INFO, CACHE_SETTINGS
+
+    # Get actual user settings as soon as we can
+    settings = PromptServer.instance.user_manager.settings.get_settings(request)
+    CACHE_SETTINGS.update({
+        'sortMethod': settings.get("LoRA Sidebar.General.sortMethod", 'AlphaAsc'),
+        'sortModels': settings.get("LoRA Sidebar.General.sortModels", 'None'),
+        'tagSource': settings.get("LoRA Sidebar.General.tagSource", 'CivitAI'),
+        'customTags': settings.get("LoRA Sidebar.General.customTags", "").split(','),
+        'catNew': settings.get("LoRA Sidebar.General.catNew", True)
+    })
     
     # Check if processing is already in progress
     if is_processing:
@@ -1530,13 +1542,7 @@ async def process_loras(request):
                             sort_metadata = await get_lora_sort_metadata()
                             LORA_CACHE['ordered_loras'] = await sort_loras_with_categories(
                                 LORA_CACHE['ordered_loras'],
-                                {
-                                    'sortMethod': 'AlphaAsc',  # Default sort
-                                    'sortModels': 'None',
-                                    'tagSource': 'CivitAI',
-                                    'customTags': [],
-                                    'catNew': True
-                                },
+                                CACHE_SETTINGS,
                                 processed_loras.get('favorites', []),
                                 sort_metadata
                             )
@@ -1544,7 +1550,7 @@ async def process_loras(request):
                         # Update category counts
                         manage_category_counts("calculate", 
                             loras=LORA_CACHE['ordered_loras'],
-                            settings={'catNew': True}  # Default settings
+                            settings=CACHE_SETTINGS
                         )
 
                     processed_count += 1
@@ -1625,9 +1631,44 @@ async def process_loras(request):
                     "total": total_count
                 })
 
+        if LORA_CACHE.get('ordered_loras'):
+            # Get proper user settings
+            settings = PromptServer.instance.user_manager.settings.get_settings(request)
+            sort_metadata = await get_lora_sort_metadata()
+            
+            # Resort entire cache with proper settings
+            LORA_CACHE['ordered_loras'] = await sort_loras_with_categories(
+                LORA_CACHE['ordered_loras'],
+                settings,
+                processed_loras.get('favorites', []),
+                sort_metadata
+            )
+            
+            # Final category calculation with proper settings
+            category_info = manage_category_counts("calculate",
+                loras=LORA_CACHE['ordered_loras'],
+                settings=settings
+            )
+            
+            response_data = {
+                "status": "Processing complete",
+                "processed_count": processed_count,
+                "total_count": total_count,
+                "skipped_count": skipped_count,
+                "categoryInfo": category_info
+            }
+        else:
+            response_data = {
+                "status": "Processing complete",
+                "processed_count": processed_count,
+                "total_count": total_count,
+                "skipped_count": skipped_count
+            }
+
     finally:
         is_processing = False  # Ensure flag is reset when processing finishes
         LoraDataStore.clear_data()
+        # disable the refresh all setting after processing
         setting_id = "LoRA Sidebar.General.refreshAll"
         settings = PromptServer.instance.user_manager.settings.get_settings(request)
         settings[setting_id] = False
@@ -1635,16 +1676,7 @@ async def process_loras(request):
         refresh_setting = settings.get("LoRA Sidebar.General.refreshAll")
         logger.info(f"Current refresh setting value: {refresh_setting}")
 
-
-        # disable the refresh all setting after processing
-        #PromptServer.instance.user_manager.settings.save_settings(request, {"LoRA Sidebar.General.refreshAll": False})
-
-    return web.json_response({
-        "status": "Processing complete",
-        "processed_count": processed_count,
-        "total_count": total_count,
-        "skipped_count": skipped_count
-    })
+    return web.json_response(response_data)
 
 
 @PromptServer.instance.routes.get("/lora_sidebar/data")
@@ -2111,10 +2143,15 @@ async def refresh_lora(request):
             if version_info:
                 created_date = format_date(version_info.get('createdAt'))
                 updated_date = format_date(version_info.get('updatedAt'))
-                if created_date != existing_info.get('createdDate'):
-                    updates['createdDate'] = created_date
-                if updated_date != existing_info.get('updatedDate'):
-                    updates['updatedDate'] = updated_date
+                
+                # If API version has valid date or existing date is invalid/missing, update it
+                if (created_date != 'unknown' and created_date != existing_info.get('createdDate')) or \
+                existing_info.get('createdDate') in [None, 'unknown']:
+                    updates['createdDate'] = created_date if created_date != 'unknown' else datetime.now().strftime('%Y-%m-%d')
+                    
+                if (updated_date != 'unknown' and updated_date != existing_info.get('updatedDate')) or \
+                existing_info.get('updatedDate') in [None, 'unknown']:
+                    updates['updatedDate'] = updated_date if updated_date != 'unknown' else datetime.now().strftime('%Y-%m-%d')
 
             # If there are updates, apply them while preserving user edits
             if updates:
@@ -2216,9 +2253,9 @@ async def update_lora_info(request):
     try:
         data = await request.json()
         lora_id = data.get('id')
-        field = data.get('field')  # The field to update
-        value = data.get('value')  # The new value
-        
+        field = data.get('field')
+        value = data.get('value')
+       
         if not all([lora_id, field]):
             return web.json_response({
                 "status": "error",
@@ -2228,38 +2265,70 @@ async def update_lora_info(request):
         # Construct paths
         lora_folder = os.path.join(LORA_DATA_DIR, lora_id)
         info_file_path = os.path.join(lora_folder, "info.json")
-        
+       
         if not os.path.exists(info_file_path):
             return web.json_response({
                 "status": "error",
                 "message": "LoRA info file not found"
             }, status=404)
-        
+       
         # Read current info
         with open(info_file_path, "r", encoding="utf-8") as f:
             info_data = json.load(f)
-            
+           
         # Initialize user_edits if it doesn't exist
         if 'user_edits' not in info_data:
             info_data['user_edits'] = []
-            
+           
         # Special handling for arrays/lists
         if isinstance(value, list) and field in ['tags', 'trained_words']:
-            # Ensure each item is a string and stripped
             value = [str(item).strip() for item in value if str(item).strip()]
-            
+           
         # Update the field
         old_value = info_data.get(field)
         info_data[field] = value
-        
+           
         # Track the edit if it's not already in user_edits
         if field not in info_data['user_edits']:
             info_data['user_edits'].append(field)
-            
+
+        # Update in-memory cache before file write
+        cache_updated = False
+        if LORA_CACHE.get('ordered_loras'):
+            for lora in LORA_CACHE['ordered_loras']:
+                if lora['id'] == lora_id:
+                    lora[field] = value
+                    if 'user_edits' not in lora:
+                        lora['user_edits'] = []
+                    if field not in lora['user_edits']:
+                        lora['user_edits'].append(field)
+                    cache_updated = True
+                    break
+
         # Save the updated info
-        with open(info_file_path, "w", encoding="utf-8") as f:
-            json.dump(info_data, f, indent=4, ensure_ascii=False)
-            
+        try:
+            with open(info_file_path, "w", encoding="utf-8") as f:
+                json.dump(info_data, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"Error saving info file: {str(e)}")
+            if cache_updated:
+                return web.json_response({
+                    "status": "warning",
+                    "message": "Changes saved to memory but not to disk. Changes may be lost on server restart.",
+                    "field": field,
+                    "old_value": old_value,
+                    "new_value": value,
+                    "user_edits": info_data['user_edits']
+                })
+            raise
+
+        # Recalculate category info if needed
+        category_info = None
+        if field in ['tags', 'baseModel', 'subdir', 'favorite', 'nsfw']:
+            category_info = manage_category_counts("calculate",
+                loras=LORA_CACHE['ordered_loras']
+            )
+           
         # Prepare response data
         response_data = {
             "status": "success",
@@ -2270,18 +2339,19 @@ async def update_lora_info(request):
             "user_edits": info_data['user_edits']
         }
         
-        # Log the update
+        if category_info:
+            response_data["categoryInfo"] = category_info
+       
         logger.info(f"Updated LoRA {lora_id} field '{field}': {old_value} -> {value}")
-        
         return web.json_response(response_data)
-        
+       
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error updating LoRA info: {str(e)}")
         return web.json_response({
             "status": "error",
             "message": "Invalid JSON data"
         }, status=400)
-        
+       
     except Exception as e:
         logger.error(f"Error updating LoRA info: {str(e)}")
         return web.json_response({
@@ -2634,26 +2704,54 @@ async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
     for lora in loras:
         # Set status flags
         lora['favorite'] = lora['id'] in favorites
-        
-        # Calculate new status
+
+        # auto data handling so people don't have to run updates on all their previous loras
         creation_date = None
-        if lora.get('createdDate'):
+        needs_update = False
+
+        # Try metadata date first
+        if lora.get('createdDate') and lora['createdDate'] != 'unknown':
             try:
                 creation_date = datetime.strptime(lora['createdDate'], '%Y-%m-%d')
-                logger.info(f"LoRA {lora['name']} using metadata date: {creation_date}")
+                logger.debug(f"LoRA {lora.get('name', lora['id'])} using metadata date: {creation_date}")
             except ValueError:
-                logger.error(f"Failed to parse createdDate for {lora['name']}: {lora.get('createdDate')}")
+                logger.debug(f"Invalid metadata date for {lora.get('name', lora['id'])}")
                 creation_date = None
         
-        if creation_date is None:
-            if sort_metadata and lora['id'] in sort_metadata:
-                creation_date = datetime.fromtimestamp(sort_metadata[lora['id']]['ctime'])
-            else:
-                creation_date = datetime.now()
-        
-        lora['created_time'] = creation_date.timestamp()
+        # If no valid metadata date, try sort_metadata cache first as it's faster
+        if not creation_date and sort_metadata and lora['id'] in sort_metadata:
+            creation_date = datetime.fromtimestamp(sort_metadata[lora['id']]['ctime'])
+            logger.debug(f"Using sort_metadata date for {lora['id']}: {creation_date}")
+
+        # If still no date, check LoRA folder creation time
+        if not creation_date:
+            lora_folder = os.path.join(LORA_DATA_DIR, lora['id'])
+            try:
+                folder_stat = os.stat(lora_folder)
+                folder_date = datetime.fromtimestamp(folder_stat.st_ctime)
+                creation_date = folder_date
+                needs_update = True
+                logger.debug(f"Using folder creation date for {lora['id']}: {creation_date}")
+            except Exception as e:
+                logger.error(f"Error getting folder date for {lora['id']}: {str(e)}")
+
+        # Update info.json if we found a folder date
+        if needs_update and creation_date:
+            info_path = os.path.join(LORA_DATA_DIR, lora['id'], "info.json")
+            try:
+                with open(info_path, 'r', encoding='utf-8') as f:
+                    info_data = json.load(f)
+                info_data['createdDate'] = creation_date.strftime('%Y-%m-%d')
+                with open(info_path, 'w', encoding='utf-8') as f:
+                    json.dump(info_data, f, indent=4, ensure_ascii=False)
+                logger.info(f"Updated {lora['id']} info.json with folder date: {creation_date}")
+            except Exception as e:
+                logger.error(f"Error updating info.json date for {lora['id']}: {str(e)}")
+
+        # Store final timestamp and calculate new status
+        lora['created_time'] = creation_date.timestamp() if creation_date else FALLBACK_TIMESTAMP
         hours_ago = datetime.now() - timedelta(hours=NEW_ITEM_HOURS)
-        lora['is_new'] = creation_date >= hours_ago
+        lora['is_new'] = creation_date >= hours_ago if creation_date else False
 
         # Assign real category
         if settings['sortModels'] == 'Tags':
@@ -2672,23 +2770,43 @@ async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
     # Define sort key function
     def sort_key(lora):
         if settings['sortMethod'] == 'AlphaAsc':
-            name = lora.get('name', lora.get('filename', 'zzz')) # using zzz so these will sort at the end
+            # Use 'zzz' as a fallback if 'name' is missing or None
+            name = lora.get('name') or lora.get('filename') or 'zzz'
             return name.lower()
         elif settings['sortMethod'] == 'AlphaDesc':
-            name = lora.get('name', lora.get('filename', '___')) # again using this so our bad loras are at the bottom
-            return -ord(name[0].lower()) 
+            # Use '___' as a fallback if 'name' is missing or None
+            name = lora.get('name') or lora.get('filename') or '___'
+            return -ord(name[0].lower())
         elif settings['sortMethod'] == 'DateNewest':
+            date_str = lora.get('createdDate', '1970-01-01')
+            # If `date_str` is explicitly '1970-01-01' or 'unknown', use fallback directly
+            if date_str in ('unknown', '1970-01-01'):
+                return FALLBACK_TIMESTAMP
             try:
-                date_str = lora.get('createdDate', '1970-01-01')
-                return -datetime.strptime(date_str, '%Y-%m-%d').timestamp()
-            except (ValueError, TypeError):
-                return float('inf')  # Will sort to bottom since we're using negative timestamps
+                timestamp = datetime.strptime(date_str, '%Y-%m-%d').timestamp()
+                return -timestamp
+            except (ValueError, OSError):
+                # Attempt flexible parsing as a backup
+                try:
+                    parsed_date = parser.parse(date_str)
+                    return parsed_date.timestamp()
+                except (ValueError, TypeError, OSError):
+                    logger.error(f"Could not parse date for LoRA {lora.get('id', 'Unknown ID')}: {date_str}")
+                    return FALLBACK_TIMESTAMP
         else:  # DateOldest
+            date_str = lora.get('createdDate', '1970-01-01')
+            if date_str in ('unknown', '1970-01-01'):
+                return -FALLBACK_TIMESTAMP
             try:
-                date_str = lora.get('createdDate', '1970-01-01')
-                return datetime.strptime(date_str, '%Y-%m-%d').timestamp()
-            except (ValueError, TypeError):
-                return float('inf')  # Sort to end if date parsing fails
+                timestamp = datetime.strptime(date_str, '%Y-%m-%d').timestamp()
+                return timestamp
+            except (ValueError, OSError):
+                try:
+                    parsed_date = parser.parse(date_str)
+                    return -parsed_date.timestamp()
+                except (ValueError, TypeError, OSError):
+                    logger.error(f"Could not parse date for LoRA {lora.get('id', 'Unknown ID')}: {date_str}")
+                    return -FALLBACK_TIMESTAMP
 
     # Sort based on settings
     loras = sorted(loras, key=sort_key)
