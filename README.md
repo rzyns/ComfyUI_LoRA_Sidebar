@@ -1,11 +1,19 @@
 # ComfyUI_LoRA_Sidebar
-### MASSIVE Update, just get it!
+### EVEN BIGGER UPDATE - NOT JUST A SIDEBAR ANYMORE WITH PREVIEWS ON THE CANVAS!!!
 ## What is this?
 A custom front-end UX node that creates a visual library of all your LoRAs. It's designed to be fast, slim, and make using LoRAs in Comfy a lot more fun for visual users - especially if you have lots of LoRAs. Should make people used to A1111 and other UI heavy platforms feel more at home. If you've got lots of LoRAs, this sidebar could be your new best friend!
 
 ![image](https://github.com/user-attachments/assets/a1140952-2342-4c92-8f50-32067b2e2e0f)
 
 ## Updates
+#### 11/23/24
+- Wow, not even I was prepared for this update
+- Added all new "Smart Info" feature, empowering your ComfyUI experience without even opening the sidebar. Game Changer
+- Heaps of fixes and improvements
+- Removed accidental dependency introduced in last version for dateutil
+- Probably added a few edge case bugs, a refresh should fix any you hit (make sure to refresh if you change the category method)
+- "New" category is disabled by default now since it has some edge case issues I need to fix
+- Seriously though, this update is massive and totally changes the plugin
 #### 11/11/24
 - New visual loading indicator with some info tips
 - Rewrote handling of files with bad or missing data, much more robust
@@ -20,14 +28,6 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 - Lots of drag and drop fixes and improvements
 - Added LoRA counts to categories
 - Improved startup messages for those that like to watch those things 😄
-#### 11/02/24
-- Added Support for SD 3.5 and Illustrious LoRAs
-- Improved LoRA Info Pop Up UX
-- Added new sorting options
-- New option to use NSFW folder structure
-- Improved processing and refresh logic
-- Now supports local saved sha256 hashes
-- Lots of small big fixes and tweaks
 
 ## Features
 - Sidebar that automatically generates a visual library of all your LoRA models
@@ -37,13 +37,17 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 - Easily filter LoRAs by base model (and any search term, obviously)
 - View LoRA details via LoRA Info popup, includes important model info and has easy to copy trained words and tags
 - Drag and drop LoRAs to create or update LoRA nodes on the canvas
-   - Drag and drop images from the LoRA Info popup to load entire workflows (if metadata exists)
+  - Drag and drop images from the LoRA Info popup to load entire workflows (if metadata exists)
 - Categorize and sort your LoRAs in multiple ways such as folder structure and automatic or custom tags
 - Works with custom LoRAs - Allows easy editing of LoRA details
 - Provides NSFW protection for all those LoRAs that you don't remember downloading 😁
+  - Lots of customization and options here including folder level settings 
 - Battle tested with very large (9000+ models) LoRA libraries
 - Supports symlinks!
 - Supports video preview files, because why not
+- Supports SD 3.5 and Illustrious LoRAs
+- Supports local saved sha256 hashes
+
 
 ## Installation
 ### Registry / Manager
