@@ -8,7 +8,7 @@ A custom front-end UX node that creates a visual library of all your LoRAs. It's
 ## Updates
 #### 11/23/24
 - Wow, not even I was prepared for this update
-- Added all new "Smart Info" feature, empowering your ComfyUI experience without even opening the sidebar. Game Changer
+- Added all new "Smart Info" feature, empowering your ComfyUI experience without even opening the sidebar. Game Changer 🤯
 - Heaps of fixes and improvements
 - Removed accidental dependency introduced in last version for dateutil
 - Probably added a few edge case bugs, a refresh should fix any you hit (make sure to refresh if you change the category method)
