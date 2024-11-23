@@ -19,7 +19,6 @@ import sys
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 import random
-from dateutil import parser
 
 
 # Set up logging
@@ -75,7 +74,9 @@ CACHE_SETTINGS = {
     'sortModels': 'None',
     'tagSource': 'CivitAI',
     'customTags': [],
-    'catNew': True
+    'catNew': True,
+    'nsfwFolder': True,
+    'nsfwString': '4game'
 }
 
 # loading bar stuff
@@ -862,6 +863,33 @@ async def get_lora_preview(request):
     
     return web.Response(status=404)
 
+@PromptServer.instance.routes.get("/lora_sidebar/info/{lora_name}")
+async def get_lora_info(request):
+    try:
+        lora_name = request.match_info['lora_name']
+        info_path = os.path.join(LORA_DATA_DIR, lora_name, "info.json")
+        
+        if not os.path.exists(info_path):
+            return web.json_response({
+                "status": "error",
+                "message": "LoRA info file not found"
+            }, status=404)
+        
+        with open(info_path, "r", encoding="utf-8") as f:
+            info_data = json.load(f)
+            
+        return web.json_response({
+            "status": "success",
+            "info": info_data
+        })
+            
+    except Exception as e:
+        logger.error(f"Error getting LoRA info: {str(e)}")
+        return web.json_response({
+            "status": "error",
+            "message": str(e)
+        }, status=500)
+
 @PromptServer.instance.routes.get("/lora_sidebar/custom_image/{lora_name}/{image_name}")
 async def get_lora_custom_image(request):
     # Load custom images for a LoRA
@@ -1122,7 +1150,9 @@ async def process_loras(request):
         'sortModels': settings.get("LoRA Sidebar.General.sortModels", 'None'),
         'tagSource': settings.get("LoRA Sidebar.General.tagSource", 'CivitAI'),
         'customTags': settings.get("LoRA Sidebar.General.customTags", "").split(','),
-        'catNew': settings.get("LoRA Sidebar.General.catNew", True)
+        'catNew': settings.get("LoRA Sidebar.General.catNew", True),
+        'nsfwFolder': settings.get("LoRA Sidebar.NSFW.nsfwFolder", True),
+        'nsfwString': settings.get("LoRA Sidebar.NSFW.folderString", 'NSFW')
     })
     
     # Check if processing is already in progress
@@ -1684,7 +1714,6 @@ async def get_lora_data(request):
     # Get request parameters
     offset = int(request.query.get('offset', 0))
     limit = int(request.query.get('limit', 500))
-    nsfw_folder = request.query.get('nsfw_folder', 'false').lower() == 'true'
 
     # Make sure we don't go over actual total lora size
     #totalLoras = len(LORA_CACHE['ordered_loras'])
@@ -1705,17 +1734,27 @@ async def get_lora_data(request):
         logger.info("No cache found, will rebuild")
         needs_rebuild = True
     else:
-        # Check if sort settings changed
-        for key in ['sortMethod', 'sortModels', 'tagSource']:
+        # Settings that require rebuild (modify core data)
+        rebuild_keys = ['nsfwFolder', 'nsfwString']
+        for key in rebuild_keys:
             if settings.get(key) != CACHE_SETTINGS.get(key):
-                logger.info(f"Sort setting changed: {key} {CACHE_SETTINGS.get(key)} -> {settings.get(key)}")
-                needs_resort = True
+                logger.info(f"Setting requiring rebuild changed: {key} {CACHE_SETTINGS.get(key)} -> {settings.get(key)}")
+                needs_rebuild = True
                 break
-                
-        # Check if custom tags changed when using custom tag source
-        if settings.get('tagSource') == 'Custom' and settings.get('customTags') != CACHE_SETTINGS.get('customTags'):
-            logger.info("Custom tags changed")
-            needs_resort = True
+
+        # Settings that only need resort (presentation changes)
+        if not needs_rebuild:  # Only check if we don't already need rebuild
+            resort_keys = ['sortMethod', 'sortModels', 'tagSource']
+            for key in resort_keys:
+                if settings.get(key) != CACHE_SETTINGS.get(key):
+                    logger.info(f"Sort setting changed: {key} {CACHE_SETTINGS.get(key)} -> {settings.get(key)}")
+                    needs_resort = True
+                    break
+            
+            # Custom tags check
+            if settings.get('tagSource') == 'Custom' and settings.get('customTags') != CACHE_SETTINGS.get('customTags'):
+                logger.info("Custom tags changed")
+                needs_resort = True
    
     # Load favorites
     favorites = []
@@ -1745,9 +1784,11 @@ async def get_lora_data(request):
                         data['favorite'] = folder in favorites
                     
                         # Add NSFW folder check
+                        nsfw_folder = settings.get('nsfwFolder', True)
                         if nsfw_folder and 'path' in data:
                             path_lower = data['path'].lower()
-                            if 'nsfw' in path_lower:
+                            nsfw_string = settings.get('nsfwString', 'NSFW').lower()
+                            if nsfw_string in path_lower:
                                 logger.info(f"Setting NSFW flag for {folder} due to path: {data['path']}")
                                 data['nsfw'] = True
 
@@ -1772,7 +1813,9 @@ async def get_lora_data(request):
             'sortModels': settings.get('sortModels'),
             'tagSource': settings.get('tagSource'),
             'customTags': settings.get('customTags', []),
-            'catNew': settings.get('catNew', True)
+            'catNew': settings.get('catNew', True),
+            'nsfwFolder': settings.get('nsfwFolder', True),
+            'nsfwString': settings.get("nsfwString", 'NSFW')
         })
 
     elif needs_resort:
@@ -1791,20 +1834,93 @@ async def get_lora_data(request):
             'sortModels': settings.get('sortModels'),
             'tagSource': settings.get('tagSource'),
             'customTags': settings.get('customTags', []),
-            'catNew': settings.get('catNew', True)
+            'catNew': settings.get('catNew', True),
+            'nsfwFolder': settings.get('nsfwFolder', True),
+            'nsfwString': settings.get("nsfwString", 'NSFW')
         })
+
+    # Get all loras from cache
+    all_loras = LORA_CACHE.get('ordered_loras', [])
+
+    # Separate loras into priority groups
+    favorites_list = [lora for lora in all_loras if lora['favorite']]
+    new_items = []
+    if settings.get('catNew'):
+        new_items = [lora for lora in all_loras if not lora['favorite'] and lora.get('is_new')]
+
+    def sort_category(cat):
+        """
+        Custom sort function that:
+        1. Forces lowercase first for consistent sorting
+        2. Handles numeric prefixes properly
+        3. Preserves natural number ordering
+        """
+        # Force lowercase immediately
+        cat = str(cat).strip().lower()
+        
+        # Split the string into numeric and non-numeric parts
+        parts = []
+        current_part = ""
+        current_is_digit = False
+        
+        for char in cat:
+            is_digit = char.isdigit()
+            if current_part and is_digit != current_is_digit:
+                # Type changed, store the current part
+                if current_is_digit:
+                    parts.append(int(current_part))
+                else:
+                    parts.append(current_part)  # Already lowercase
+                current_part = ""
+            current_part += char
+            current_is_digit = is_digit
+            
+        # Add the last part
+        if current_part:
+            if current_is_digit:
+                parts.append(int(current_part))
+            else:
+                parts.append(current_part)  # Already lowercase
+                
+        return parts
+    
+    # Group remaining loras by category
+    remaining_by_category = {}
+    for lora in all_loras:
+        if not lora['favorite'] and (not lora.get('is_new') or not settings.get('catNew')):
+            cat = str(lora.get('category', 'Unsorted')).lower()
+            if cat not in remaining_by_category:
+                remaining_by_category[cat] = []
+            remaining_by_category[cat].append(lora)
+    
+    # Create ordered list with priorities
+    ordered_categories = sorted(remaining_by_category.keys())
+    prioritized_loras = favorites_list + new_items
+    #Debug print order
+    logger.info("Category order:")
+    for idx, cat in enumerate(ordered_categories[:10]):
+        logger.info(f"{idx + 1}. {cat} ({len(remaining_by_category[cat])} items)")
+    
+    # Add category-based loras in order
+    for category in ordered_categories:
+        prioritized_loras.extend(remaining_by_category[category])
+    # Debug print the first few non-favorite, non-new loras
+    start_idx = len(favorites_list) + len(new_items)
+    logger.info("\nFirst 10 category loras being sent:")
+    for idx, lora in enumerate(prioritized_loras[start_idx:start_idx+10]):
+        logger.info(f"{idx + 1}. Category: {lora.get('category', 'Unknown')} | Name: {lora.get('name', lora.get('filename', 'Unknown'))}")
     
     # Apply pagination
     start_idx = offset
     end_idx = offset + limit
     paginated_loras = LORA_CACHE['ordered_loras'][start_idx:end_idx]
-
-    # Use unified category management
-    category_counts = manage_category_counts("calculate",
-        loras=LORA_CACHE['ordered_loras'],
-        paginated_loras=paginated_loras,
-        settings=settings
-    )
+    # Also debug print what's actually being sent in this chunk
+    logger.info(f"\nSending chunk from {start_idx} to {end_idx} ({len(paginated_loras)} items)")
+    logger.info("First 10 items in this chunk:")
+    for idx, lora in enumerate(paginated_loras[:10]):
+        logger.info(f"{idx + 1}. Category: {lora.get('category', 'Unknown')} | " 
+                   f"Name: {lora.get('name', lora.get('filename', 'Unknown'))} | "
+                   f"{'(Favorite)' if lora.get('favorite') else '(New)' if lora.get('is_new') else ''}")
 
     # Clear sent tracking on initial load
     if offset == 0:
@@ -1812,6 +1928,13 @@ async def get_lora_data(request):
     
     # Track what we're sending
     LORA_CACHE['sent_loras'].update(lora['id'] for lora in paginated_loras)
+
+    # Calculate category counts for all data
+    category_counts = manage_category_counts("calculate",
+        loras=all_loras,
+        paginated_loras=paginated_loras,
+        settings=settings
+    )
    
     return web.json_response({
         "loras": paginated_loras,
@@ -2684,7 +2807,9 @@ def get_user_settings(request):
             'sortModels': settings.get("LoRA Sidebar.General.sortModels", 'None'),
             'tagSource': settings.get("LoRA Sidebar.General.tagSource", 'CivitAI'),
             'customTags': settings.get("LoRA Sidebar.General.customTags", "").split(','),
-            'catNew': settings.get("LoRA Sidebar.General.catNew", True)
+            'catNew': settings.get("LoRA Sidebar.General.catNew", True),
+            'nsfwFolder': settings.get("LoRA Sidebar.NSFW.nsfwFolder", True),
+            'nsfwString': settings.get("LoRA Sidebar.NSFW.folderString", 'NSFW')
         }
     except Exception as e:
         logger.error(f"Error getting user settings: {str(e)}")
@@ -2694,7 +2819,9 @@ def get_user_settings(request):
             'sortModels': 'None',
             'tagSource': 'CivitAI',
             'customTags': [],
-            'catNew': True
+            'catNew': True,
+            'nsfwFolder': True,
+            'nsfwString': 'NSFW'
         }
 
 async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
@@ -2713,7 +2840,7 @@ async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
         if lora.get('createdDate') and lora['createdDate'] != 'unknown':
             try:
                 creation_date = datetime.strptime(lora['createdDate'], '%Y-%m-%d')
-                logger.debug(f"LoRA {lora.get('name', lora['id'])} using metadata date: {creation_date}")
+                # logger.debug(f"LoRA {lora.get('name', lora['id'])} using metadata date: {creation_date}")
             except ValueError:
                 logger.debug(f"Invalid metadata date for {lora.get('name', lora['id'])}")
                 creation_date = None
@@ -2721,7 +2848,7 @@ async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
         # If no valid metadata date, try sort_metadata cache first as it's faster
         if not creation_date and sort_metadata and lora['id'] in sort_metadata:
             creation_date = datetime.fromtimestamp(sort_metadata[lora['id']]['ctime'])
-            logger.debug(f"Using sort_metadata date for {lora['id']}: {creation_date}")
+            # logger.debug(f"Using sort_metadata date for {lora['id']}: {creation_date}")
 
         # If still no date, check LoRA folder creation time
         if not creation_date:
@@ -2731,7 +2858,7 @@ async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
                 folder_date = datetime.fromtimestamp(folder_stat.st_ctime)
                 creation_date = folder_date
                 needs_update = True
-                logger.debug(f"Using folder creation date for {lora['id']}: {creation_date}")
+                # logger.debug(f"Using folder creation date for {lora['id']}: {creation_date}")
             except Exception as e:
                 logger.error(f"Error getting folder date for {lora['id']}: {str(e)}")
 
@@ -2754,15 +2881,16 @@ async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
         lora['is_new'] = creation_date >= hours_ago if creation_date else False
 
         # Assign real category
-        if settings['sortModels'] == 'Tags':
+        sort_models = settings.get('sortModels', 'All LoRAs')
+        if sort_models == 'Tags':
             category = 'Unsorted'
-            if lora.get('tags'):
+            if lora.get('tags', []):
                 for tag in get_tag_categories(settings):
                     if tag in lora['tags']:
                         category = tag
                         break
             lora['category'] = category
-        elif settings['sortModels'] == 'Subdir':
+        elif sort_models == 'Subdir':
             lora['category'] = lora.get('subdir', '').split('\\')[-1] or 'Unsorted'
         else:
             lora['category'] = 'All LoRAs'
@@ -2770,43 +2898,56 @@ async def sort_loras_with_categories(loras, settings, favorites, sort_metadata):
     # Define sort key function
     def sort_key(lora):
         if settings['sortMethod'] == 'AlphaAsc':
-            # Use 'zzz' as a fallback if 'name' is missing or None
             name = lora.get('name') or lora.get('filename') or 'zzz'
             return name.lower()
         elif settings['sortMethod'] == 'AlphaDesc':
-            # Use '___' as a fallback if 'name' is missing or None
             name = lora.get('name') or lora.get('filename') or '___'
             return -ord(name[0].lower())
         elif settings['sortMethod'] == 'DateNewest':
             date_str = lora.get('createdDate', '1970-01-01')
-            # If `date_str` is explicitly '1970-01-01' or 'unknown', use fallback directly
             if date_str in ('unknown', '1970-01-01'):
                 return FALLBACK_TIMESTAMP
-            try:
-                timestamp = datetime.strptime(date_str, '%Y-%m-%d').timestamp()
-                return -timestamp
-            except (ValueError, OSError):
-                # Attempt flexible parsing as a backup
+            
+            # Common date formats
+            formats = [
+                '%Y-%m-%dT%H:%M:%S.%f%z',  # 2024-10-16T01:33:25.4734839+00:00
+                '%Y-%m-%dT%H:%M:%S.%f',    # 2024-10-16T01:33:25.473483
+                '%Y-%m-%d',                 # 2023-12-25
+                '%Y/%m/%d',                 # 2023/12/25
+                '%d-%m-%Y',                 # 25-12-2023
+                '%d/%m/%Y',                # 25/12/2023
+                '%m/%d/%Y',                # 12/25/2023 (US format)
+                '%Y-%m-%d %H:%M:%S',       # 2023-12-25 13:45:30
+                '%Y-%m-%dT%H:%M:%S',       # 2023-12-25T13:45:30
+                '%Y-%m-%dT%H:%M:%SZ',      # 2023-12-25T13:45:30Z
+                '%d-%b-%Y',                # 25-Dec-2023
+                '%d %b %Y',                # 25 Dec 2023
+                '%Y%m%d'                   # 20231225
+            ]
+            
+            for fmt in formats:
                 try:
-                    parsed_date = parser.parse(date_str)
-                    return parsed_date.timestamp()
-                except (ValueError, TypeError, OSError):
-                    logger.error(f"Could not parse date for LoRA {lora.get('id', 'Unknown ID')}: {date_str}")
-                    return FALLBACK_TIMESTAMP
+                    timestamp = datetime.strptime(date_str, fmt).timestamp()
+                    return -timestamp
+                except (ValueError, OSError):
+                    continue
+                    
+            logger.error(f"Could not parse date for LoRA {lora.get('id', 'Unknown ID')}: {date_str}")
+            return FALLBACK_TIMESTAMP
         else:  # DateOldest
             date_str = lora.get('createdDate', '1970-01-01')
             if date_str in ('unknown', '1970-01-01'):
                 return -FALLBACK_TIMESTAMP
-            try:
-                timestamp = datetime.strptime(date_str, '%Y-%m-%d').timestamp()
-                return timestamp
-            except (ValueError, OSError):
-                try:
-                    parsed_date = parser.parse(date_str)
-                    return -parsed_date.timestamp()
-                except (ValueError, TypeError, OSError):
-                    logger.error(f"Could not parse date for LoRA {lora.get('id', 'Unknown ID')}: {date_str}")
-                    return -FALLBACK_TIMESTAMP
+                
+            for fmt in formats:
+                try: 
+                    timestamp = datetime.strptime(date_str, fmt).timestamp()
+                    return timestamp
+                except (ValueError, OSError):
+                    continue
+                    
+            logger.error(f"Could not parse date for LoRA {lora.get('id', 'Unknown ID')}: {date_str}")
+            return -FALLBACK_TIMESTAMP
 
     # Sort based on settings
     loras = sorted(loras, key=sort_key)
@@ -2892,15 +3033,6 @@ async def build_initial_cache():
         processed = 0
         lora_data = []
 
-        # Default settings for initial sort
-        default_settings = {
-            'sortMethod': 'AlphaAsc',
-            'sortModels': 'None',
-            'tagSource': 'CivitAI',
-            'customTags': [],
-            'catNew': True
-        }
-
         # Process each LoRA from processed_loras.json
         for lora_entry in lora_entries:
             base_filename = lora_entry.get('filename')
@@ -2925,16 +3057,32 @@ async def build_initial_cache():
 
         # Sort and store in cache
         if lora_data:
+            # Process NSFW folder flags before sorting
+            if CACHE_SETTINGS.get('nsfwFolder', True):
+                nsfw_string = CACHE_SETTINGS.get('nsfwString', 'NSFW').lower()
+                logger.info(f"Setting NSFW string {nsfw_string}")
+                for lora in lora_data:
+                    if lora.get('path'):
+                        path_lower = lora['path'].lower()
+                        if nsfw_string and nsfw_string in path_lower:
+                            logger.info(f"Checking NSFW path for {lora.get('name')}: {path_lower}")
+                            # Check only the path components, excluding the filename
+                            path_parts = os.path.dirname(path_lower).split(os.sep)
+                            if any(nsfw_string in part for part in path_parts):
+                                logger.info(f"Setting NSFW flag for {lora.get('name', 'Unknown')} due to path: {path_parts}")
+                                lora['nsfw'] = True
+                                lora['nsfwLevel'] = 100
+
             sort_metadata = await get_lora_sort_metadata()
             LORA_CACHE['ordered_loras'] = await sort_loras_with_categories(
-                lora_data, default_settings, favorites, sort_metadata
+                lora_data, CACHE_SETTINGS, favorites, sort_metadata
             )
             LORA_CACHE['sent_loras'] = set()  # Reset sent tracking
             
             # Calculate initial category counts
             manage_category_counts("calculate",
                 loras=LORA_CACHE['ordered_loras'],
-                settings=default_settings
+                settings=CACHE_SETTINGS
             )
 
         end_time = datetime.now()

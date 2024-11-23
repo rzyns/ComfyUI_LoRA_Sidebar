@@ -1,6 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { $el } from "../../scripts/ui.js";
+import LoraSmartInfo from './smart_info.js';
 
 var debug = {
     enabled: false,
@@ -62,6 +63,8 @@ class LoraSidebar {
         this.UseRG3 = app.ui.settings.getSettingValue("LoRA Sidebar.General.useRG3", false);
         this.infoPersist = app.ui.settings.getSettingValue("LoRA Sidebar.General.infoPersist", true);
         this.loadingOverlay = this.createLoadingOverlay();
+        this.lastLoadOffset = 0;
+        this.searchCount = 0;
         
         this.element = $el("div.lora-sidebar", {
             draggable: false,
@@ -83,12 +86,15 @@ class LoraSidebar {
         this.preventDragging();
 
         this.placeholderUrl = "/lora_sidebar/placeholder";
-        this.CatNew = app.ui.settings.getSettingValue("LoRA Sidebar.General.catNew", true);
+        this.CatNew = app.ui.settings.getSettingValue("LoRA Sidebar.General.catNew", false);
         this.FavOpen = app.ui.settings.getSettingValue("LoRA Sidebar.General.favState", true);
+
+        this.smartEnabled = app.ui.settings.getSettingValue("LoRA Sidebar.General.smartEnabled", true)
 
         this.showNSFW = app.ui.settings.getSettingValue("LoRA Sidebar.NSFW.hideNSFW", true);
         this.nsfwThreshold = app.ui.settings.getSettingValue("LoRA Sidebar.NSFW.nsfwLevel", 25);
         this.nsfwFolder = app.ui.settings.getSettingValue("LoRA Sidebar.NSFW.nsfwFolder", true);
+        this.nsfwString = app.ui.settings.getSettingValue("LoRA Sidebar.NSFW.nsfwString", "NSFW");
 
         this.addStyles().catch(console.error);
 
@@ -230,6 +236,15 @@ class LoraSidebar {
         ]);
     
         return searchContainer;
+    }
+
+    debounce(func, delay) {
+        let debounceTimer;
+        return function (...args) {
+            const context = this;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => func.apply(context, args), delay);
+        };
     }
 
     debouncedSearch(searchInput) {
@@ -707,12 +722,25 @@ class LoraSidebar {
                         if (isExpanded) {
                             container.innerHTML = '';
                             this.createLoraElementsForCategory(container, favorites);
+                        } else {
+                            // update pending data when minimized
+                            container.dataset.pendingLorasData = JSON.stringify(favorites);
+                        }
+
+                        // Update pending data if any
+                        const currentCount = container.children.length;
+                        if (favorites.length > currentCount) {
+                            const pendingItems = favorites.slice(currentCount);
+                            container.dataset.pendingLoras = JSON.stringify(
+                                pendingItems.map(i => i.id)
+                            );
+                            container.dataset.pendingLorasData = JSON.stringify(pendingItems);
                         }
     
                         // Update count
                         const countDisplay = favoritesCategory.querySelector('.category-count');
                         if (countDisplay) {
-                            countDisplay.textContent = `${favorites.length}/${favorites.length}`;
+                            countDisplay.textContent = `${container.children.length}/${favorites.length}`;
                         }
                     }
     
@@ -793,7 +821,8 @@ class LoraSidebar {
                 offset: offset,
                 limit: limit,
                 sort: sortPreference,
-                nsfw_folder: this.nsfwFolder
+                nsfw_folder: this.nsfwFolder,
+                nsfw_string: this.nsfwString
             });
     
             const response = await api.fetchApi(url);
@@ -933,15 +962,20 @@ class LoraSidebar {
     
             if (startIndex === 0) {
                 this.galleryContainer.innerHTML = '';
-                let remainingItems = count;  
+                const favorites = this.filteredData.filter(lora => lora.favorite);
+                let remainingItems = Math.min(count, 250 + favorites.length); // TODO change this hard set to something that uses batch size like 10%?
+                debug.log("We've got this many loras to work with",remainingItems);
     
                 // Render Favorites
-                const favorites = this.filteredData.filter(lora => lora.favorite);
                 if (favorites.length > 0) {
                     const favoritesCategory = this.createCategoryElement("Favorites", favorites);
                     if (favoritesCategory) {
                         this.galleryContainer.appendChild(favoritesCategory);
-                        remainingItems -= favorites.length;
+                        // Only count against budget if expanded
+                        const favsContainer = favoritesCategory.querySelector('.lora-items-container');
+                        if (favsContainer && window.getComputedStyle(favsContainer).display !== 'none') {
+                            remainingItems -= favorites.length;
+                        }
                     }
                 }
     
@@ -975,7 +1009,7 @@ class LoraSidebar {
                     }
                 } else {
                     // Create categories with minimum 1 item if possible
-                    const categorizedLoras = new Map();
+                    let categorizedLoras = new Map();
     
                     // First, categorize all loras
                     remainingLoras.forEach(lora => {
@@ -997,37 +1031,99 @@ class LoraSidebar {
                         }
                         categorizedLoras.get(category).push(lora);
                     });
+
+                    categorizedLoras = new Map(
+                        Array.from(categorizedLoras.entries())
+                            .sort((a, b) => {
+                                if (a[0] === 'Unsorted') return 1;
+                                if (b[0] === 'Unsorted') return -1;
+                                return a[0].localeCompare(b[0]);
+                            })
+                    );
     
-                    // Create categories with minimum 1 item if possible
+                    // First pass - create all categories with 1 item each
                     for (const [category, loras] of categorizedLoras) {
-                        // If we have any budget left, include 1 item, otherwise none
-                        const initialItems = remainingItems > 0 ? loras.slice(0, 1) : [];
-                        if (initialItems.length > 0) remainingItems--;
-    
+
+                        debug.log("Initial category load for", category, ":", {
+                            totalLoras: loras.length,
+                            firstItem: loras[0],
+                            pendingCount: loras.length > 1 ? loras.slice(1).length : 0
+                        });
+
+                        this.searchCount = totalLoras;
+                        const initialItems = loras.slice(0, 1);
                         const categoryElement = this.createCategoryElement(category, initialItems);
                         if (categoryElement) {
                             this.galleryContainer.appendChild(categoryElement);
-    
-                            // If we're searching, update count to show filtered totals
-                            if (this.currentSearchInput.length > 0) {
-                                const countDisplay = categoryElement.querySelector('.category-count');
-                                if (countDisplay) {
-                                    countDisplay.textContent = `${loras.length}/${this.categoryInfo?.[category]?.total || loras.length}`;
-                                }
-                            }
-                            
-                            // Store remaining items as pending
+                            remainingItems--;
+
+                            // Store pending items
                             const lorasContainer = categoryElement.querySelector('.lora-items-container');
-                            if (lorasContainer && loras.length > initialItems.length) {
-                                // Fix: Only store items we haven't loaded yet as pending
-                                const loadedCount = lorasContainer.children.length;
-                                const pendingItems = loras.slice(loadedCount);
-                                if (pendingItems.length > 0) {
-                                    lorasContainer.dataset.pendingLoras = JSON.stringify(pendingItems.map(i => i.id));
-                                    lorasContainer.dataset.pendingLorasData = JSON.stringify(pendingItems);
-                                }
+                            if (lorasContainer && loras.length > 1) {
+                                lorasContainer.dataset.pendingLorasData = JSON.stringify(loras.slice(1));
                                 lorasContainer.dataset.totalItems = loras.length;
                             }
+
+                            // Update the count display
+                            const countDisplay = categoryElement.querySelector('.category-count');
+                            if (countDisplay) {
+                                // Use "broken" count display for special categories TODO - THIS IS RIDICULOUS
+                                if (category === "Favorites") {
+                                    const favoritesCategory = this.galleryContainer.querySelector(
+                                        '.lora-category[data-category="Favorites"]'
+                                    );
+                                    const favContainer = favoritesCategory.querySelector('.lora-items-container');
+                                    const totalFavorites = favContainer ? favContainer.children.length : loras.length;
+                                    countDisplay.textContent = `totalBULLSHIT/${loras.length}`;
+                                } else {
+                                const totalFromInfo = this.categoryInfo?.[category]?.total;
+                                countDisplay.textContent = `${loras.length}/${totalFromInfo}`;
+                                }
+                            }
+                        }
+                    }
+
+                    // Second pass - distribute remaining budget to expanded categories
+                    if (remainingItems > 0) {
+                        for (const [category, loras] of categorizedLoras) {
+                            debug.log(`Processing category: ${category}`);
+                            const categoryElement = this.galleryContainer.querySelector(
+                                `.lora-category[data-category="${category}"]`
+                            );
+                            if (!categoryElement) continue;
+
+                            const container = categoryElement.querySelector('.lora-items-container');
+                            if (!container || window.getComputedStyle(container).display === 'none') {
+                                debug.log(`Skipping ${category}, container:${!!container}, display:${container ? window.getComputedStyle(container).display : 'no-container'}`);
+                                continue;
+                            }
+
+                            // Load up to remaining budget
+                            const pendingItems = JSON.parse(container.dataset.pendingLorasData || '[]');
+                            const itemsToLoad = pendingItems.slice(0, remainingItems);
+                            if (itemsToLoad.length > 0) {
+                                this.createLoraElementsForCategory(container, itemsToLoad);
+                                remainingItems -= itemsToLoad.length;
+                                
+                                // Update pending data
+                                const newPending = pendingItems.slice(itemsToLoad.length);
+                                if (newPending.length > 0) {
+                                    container.dataset.pendingLorasData = JSON.stringify(newPending);
+                                } else {
+                                    delete container.dataset.pendingLorasData;
+                                }
+
+                                // Update the count display
+                                const countDisplay = categoryElement.querySelector('.category-count');
+                                if (countDisplay) {
+                                    const total = parseInt(container.dataset.totalItems || 0);
+                                    countDisplay.textContent = `${container.children.length}/${total}`;
+                                }
+
+
+                            }
+
+                            if (remainingItems <= 0) break;
                         }
                     }
                 }
@@ -1140,20 +1236,38 @@ class LoraSidebar {
        
         const observer = new MutationObserver(() => {
             const sidebarContentContainer = document.querySelector('.sidebar-content-container');
-               
+                   
             if (sidebarContentContainer) {
                 debug.log("Sidebar content container found, attaching scroll handler");
        
-                // Simple throttle without RAF
-                let isProcessing = false;
-                
-                sidebarContentContainer.addEventListener('scroll', () => {
-                    if (!isProcessing) {
-                        isProcessing = true;
+                let isLoading = false; // Track actual load state
+                   
+                sidebarContentContainer.addEventListener('scroll', async () => {
+                    // Regular processing for normal category modes
+                    if (this.sortModels !== 'None') {
+                        if (!isLoading) {
+                            isLoading = true;
+                            this.handleScrollStart();
+                            isLoading = false;
+                        }
+                        return;
+                    }
+    
+                    // Special case for "All LoRAs" mode - only near bottom
+                    if (!isLoading && this.isNearBottom(sidebarContentContainer)) {
+                        const currentItemCount = this.galleryContainer.querySelectorAll('.lora-item').length;
+                        
+                        // Skip if we're trying to load the same offset
+                        if (currentItemCount === this.lastOffset) {
+                            debug.log("Skipping duplicate load at offset:", this.lastOffset);
+                            return;
+                        }
+
+                        debug.log("Near bottom in All LoRAs mode - starting load at offset:", currentItemCount);
+                        this.lastOffset = currentItemCount;
+                        isLoading = true;
                         this.handleScrollStart();
-                        setTimeout(() => {
-                            isProcessing = false;
-                        }, 150); // Adjust this value as needed
+                        isLoading = false;
                     }
                 }, { passive: true });
        
@@ -1176,6 +1290,13 @@ class LoraSidebar {
             if (response.ok) {
                 const data = await response.json();
                 if (data.category_ids?.length) {
+
+                    debug.log("Loading category", categoryName, ":", {
+                        totalIds: data.category_ids.length,
+                        firstId: data.category_ids[0],
+                        loadedCount
+                    });
+
                     const category = this.galleryContainer.querySelector(
                         `.lora-category[data-category="${categoryName}"]`
                     );
@@ -1183,16 +1304,56 @@ class LoraSidebar {
                         const container = category.querySelector('.lora-items-container');
                         if (container) {
                             // If this is from minimize and we're already at 250, skip loading more
-                            if (isFromMinimize && container.children.length >= 250) {
+                            if (isFromMinimize && container.children.length >= 250) { //TODO - can't assume this is enough for everyone
                                 return;
                             }
-                            // respect search
+
+                            // Get currently loaded ids from container
+                            const existingIds = Array.from(container.children)
+                            .map(child => {
+                                const img = child.querySelector('img');
+                                if (!img) return null;
+                                const src = img.src;
+                                const encodedFilename = src.split('/').pop();
+                                const filename = decodeURIComponent(encodedFilename);
+                        
+                                // Only compare against the IDs in this category
+                                return data.category_ids.find(id => 
+                                    filename === id || 
+                                    encodedFilename === id
+                                );
+                            })
+                            .filter(Boolean);
+
+                            debug.log("Category IDs:", data.category_ids);
+                            debug.log("Found existing IDs:", existingIds);
+
+                            // Filter out already loaded ids from the full set
+                            const validIds = data.category_ids.filter(id => 
+                                !existingIds.includes(id)
+                                // && this.filteredData.some(lora => lora.id === id) - can remove?
+                            );
+
+                            /*
+                             // respect search
                             const ids = this.currentSearchInput.length > 0
                             ? data.category_ids.filter(id => 
                                 this.filteredData.some(lora => lora.id === id))
-                            : data.category_ids;
-                            // Just slice off what we have and get what's left
-                            const remainingIds = ids.slice(loadedCount);
+                            : data.category_ids; */
+
+                            // Special case: If all ids are "valid" but we know we have one loaded,
+                            // we need to slice off the first one to avoid duplication
+                            // If the first ID from category_ids is in our valid list, remove it
+                            if (validIds.includes(data.category_ids[0])) {
+                                const firstIdIndex = validIds.indexOf(data.category_ids[0]);
+                                validIds.splice(firstIdIndex, 1);
+                            }
+                            
+                            // const remainingIds = (validIds.length === data.category_ids.length && loadedCount === 1) 
+                            //? validIds.slice(loadedCount) 
+                            //: validIds;
+                            const remainingIds = validIds
+                            debug.log("Category:", category, "Remaining IDs:", remainingIds);
 
                             // If from minimize, limit how many we load
                             const idsToLoad = isFromMinimize 
@@ -1200,8 +1361,9 @@ class LoraSidebar {
                             : remainingIds;
 
                             const remainingLoras = idsToLoad
-                                .map(id => this.loraData.find(lora => lora.id === id))
-                                .filter(Boolean);
+                                .map(id => this.filteredData.find(lora => lora.id === id))
+                                .filter(Boolean)
+                                .filter(lora => this.showNSFW || !this.isNSFW(lora));
     
                             this.createLoraElementsForCategory(container, remainingLoras);
 
@@ -1255,14 +1417,24 @@ class LoraSidebar {
         });
     
         const approachingCategories = categories.filter(category => {
+            // Skip "All LoRAs" category when using None sorting
+            if (this.sortModels === 'None' && category.getAttribute('data-category') === "All LoRAs") {
+                return false;
+            }
+
             const container = category.querySelector('.lora-items-container');
             if (!container || window.getComputedStyle(container).display === 'none') {
                 return false;
             }
             
             const rect = category.getBoundingClientRect();
-            const needsLoading = container.dataset.pendingLorasData || 
-                                container.children.length < parseInt(container.dataset.totalItems || 0);
+            const currentCount = container.children.length;
+            const totalItems = parseInt(container.dataset.totalItems || 0);
+
+            const needsLoading = (currentCount < 500 && (container.dataset.pendingLorasData || 
+                currentCount < totalItems)) || 
+                (currentCount >= 500 && totalItems > currentCount && 
+                this.isNearCategoryEnd(category));
             
             return needsLoading && 
                    rect.top <= containerRect.bottom + buffer && 
@@ -1271,24 +1443,49 @@ class LoraSidebar {
     
         if (approachingCategories.length > 0) {
             // Process categories in chunks
-            this.processCategories(approachingCategories, 0, 50); // Process 50 items at a time
+            this.processCategories(approachingCategories, 0, 100); // Process 100 items at a time
         }
     
         // Handle non-categorized view
         if (this.sortModels === 'None' && this.isNearBottom(sidebarContentContainer)) {
-            const currentItemCount = this.galleryContainer.querySelectorAll('.lora-item').length;
-            if (currentItemCount < this.totalCount) {
+            let currentItemCount = this.galleryContainer.querySelectorAll('.lora-item').length;
+            const allLorasCategory = this.galleryContainer.querySelector('.lora-category[data-category="All LoRAs"]');
+
+            // Check for minimized favorites and adjust count using actual favorites data
+            const favoriteCount = this.filteredData.filter(lora => lora.favorite).length;
+            const favoritesCategory = this.galleryContainer.querySelector('.lora-category[data-category="Favorites"]');
+            const favoritesMinimized = favoritesCategory && 
+                window.getComputedStyle(favoritesCategory.querySelector('.lora-items-container')).display === 'none';
+
+            // Use filteredData.length as total during search
+            let effectiveTotal = this.currentSearchInput.length > 0 ? this.filteredData.length : this.totalCount;
+
+            if (favoritesMinimized) {
+                effectiveTotal -= favoriteCount;
+            }
+            
+            debug.log("All LoRAs scroll check:", {
+                currentItemCount,
+                effectiveTotal,
+                totalCount: this.totalCount,
+                isFiltered: this.currentSearchInput.length > 0,
+                isProcessing: this.isLoading
+            });
+        
+            if (currentItemCount < effectiveTotal && !this.isLoading) {
+                this.isLoading = true;
                 if (this.currentSearchInput.length > 0) {
                     const nextBatch = this.filteredData.slice(
-                        currentItemCount, 
-                        currentItemCount + Math.min(50, this.batchSize) // Process smaller chunks
+                        currentItemCount,
+                        currentItemCount + Math.min(100, this.batchSize)
                     );
                     if (nextBatch.length) {
                         this.createLoraElementsForCategory(this.galleryContainer, nextBatch);
                     }
                 } else {
-                    this.loadLoraData(currentItemCount, Math.min(50, this.batchSize));
+                    this.loadLoraData(currentItemCount, Math.min(100, this.batchSize));
                 }
+                this.isLoading = false;
             }
         }
     }
@@ -1334,7 +1531,20 @@ class LoraSidebar {
         }
     }
 
-
+    isNearCategoryEnd(category) {
+        const container = category.querySelector('.lora-items-container');
+        if (!container) return false;
+    
+        const lastItem = container.lastElementChild;
+        if (!lastItem) return false;
+    
+        const viewportHeight = window.innerHeight;
+        const lastItemRect = lastItem.getBoundingClientRect();
+        
+        // Check if last item is visible in viewport with a small buffer
+        const buffer = 200; // pixels
+        return lastItemRect.top <= viewportHeight + buffer && lastItemRect.bottom >= -buffer;
+    }
     
     isNearBottom(container) {
         const scrollPosition = container.scrollTop + container.clientHeight;
@@ -1386,7 +1596,11 @@ class LoraSidebar {
                 draggable: false
             }, [
                 $el("h3.category-title", {}, [categoryName]),
-                $el("span.category-count", {}, [`${loras.length}/${totalCount}`]),
+                $el("span.category-count", {}, [
+                    this.currentSearchInput.length && !isExpanded ?
+                        `${loras.length}/${totalCount}` :
+                        `${loras.length}/${totalCount}`
+                ]),
                 $el("span.category-toggle", {}, [isExpanded ? "▼" : "▶"])
             ]);
             
@@ -1412,6 +1626,10 @@ class LoraSidebar {
             
             // Only create lora elements if expanded, otherwise store for later
             if (!isExpanded) {
+                // Special case: Always create the first item
+                if (loras.length === 1) {
+                    this.createLoraElementsForCategory(lorasContainer, loras);
+                }
                 lorasContainer.dataset.pendingLoras = JSON.stringify(loras.map(lora => lora.id));
                 lorasContainer.dataset.pendingLorasData = JSON.stringify(loras);
             } else {
@@ -1460,8 +1678,15 @@ class LoraSidebar {
                 }))
             );
         } */
+
+        // Get existing IDs from the data attributes on the lora-items
+        const existingIds = Array.from(container.querySelectorAll('.lora-item'))
+            .map(item => item.querySelector('[draggable="true"]')?.dataset?.loraId)
+            .filter(Boolean);
         
         loras.forEach(lora => {
+            if (existingIds.includes(lora.id)) return;
+
             const loraElement = this.createLoraElement(lora);
 /*             if (loraElement && categoryName === catName) {
                 debug.log("Created individual lora element:", {
@@ -1482,6 +1707,30 @@ class LoraSidebar {
     }
     
     async toggleCategory(categoryName) {
+
+        // hack for a hack of a hack, TODO CLEAN THIS UP OMG
+        if (this.currentSearchInput.length) {
+            const category = this.galleryContainer.querySelector(
+                `.lora-category[data-category="${categoryName}"]`
+            );
+            if (category) {
+                const container = category.querySelector('.lora-items-container');
+                if (container) {
+                    const categoryLoras = this.filteredData.filter(lora => 
+                        !lora.favorite && 
+                        (!lora.is_new || !this.CatNew) && 
+                        this.getCategoryForLora(lora) === categoryName
+                    );
+                    
+                    // If we have exactly 1 filtered result and pending data, clear pending
+                    if (categoryLoras.length === 1 && container.dataset.pendingLorasData) {
+                        delete container.dataset.pendingLorasData;
+                        delete container.dataset.pendingLoras;
+                    }
+                }
+            }
+        }
+
         const category = this.galleryContainer.querySelector(
             `.lora-category[data-category="${categoryName}"]`
         );
@@ -1576,12 +1825,41 @@ class LoraSidebar {
                 } else {
                     delete content.dataset.pendingLorasData;
                 }
+            } else if (categoryName === "All LoRAs") {
+                const currentCount = content.children.length;
+                const remainingLoras = this.filteredData.filter(lora => 
+                    !lora.favorite && (!lora.is_new || !this.CatNew)
+                );
+        
+                // Only load up to 500 items initially
+                const initialLoadCount = Math.min(500 - currentCount, remainingLoras.length - currentCount);
+                if (initialLoadCount > 0) {
+                    const lorasToAdd = remainingLoras.slice(currentCount, currentCount + initialLoadCount);
+                    this.createLoraElementsForCategory(content, lorasToAdd);
+                }
+        
+                // Store remaining items as pending if there are more
+                if (remainingLoras.length > content.children.length) {
+                    content.dataset.pendingLorasData = JSON.stringify(
+                        remainingLoras.slice(content.children.length)
+                    );
+                }
             }
         
             const loadedCount = content.children.length;
-            const totalCount = parseInt(content.dataset.totalItems || 0);
+            debug.log("Toggle expand - current children count:", loadedCount);
+            debug.log("Current children:", content.children);
+            const totalCount = this.categoryInfo?.[categoryName]?.total || loras.length;
+            content.dataset.totalItems = totalCount.toString();
+            
             if (loadedCount < 500 && loadedCount < totalCount) {
                 await this.loadCategoryBatch(categoryName, loadedCount);
+            }
+
+            // We need to update the count display here after loading items
+            const countDisplay = category.querySelector('.category-count');
+            if (countDisplay) {
+                countDisplay.textContent = `${content.children.length}/${totalCount}`;
             }
         }
     
@@ -1905,6 +2183,11 @@ class LoraSidebar {
         const canvas = app.canvas.canvas;
         let currentDragData = null;
         let isDragging = false;
+
+        // Remove existing listeners to prevent stacking
+        canvas.removeEventListener('dragstart', this.handleDragStart);
+        canvas.removeEventListener('drop', this.handleDrop);
+        canvas.removeEventListener('dragover', this.handleDragOver);
     
         // Make this available to other methods
         this.handleDragStart = (e) => {
@@ -1915,7 +2198,7 @@ class LoraSidebar {
             }
         };
     
-        const handleDrop = (e) => {
+        this.handleDrop = (e) => {
             debug.log("Drop handler called from:", e.target);
             // First, try to get the drag data
             let data = e.dataTransfer?.getData('application/json') || currentDragData;
@@ -2082,20 +2365,20 @@ class LoraSidebar {
             }
         }, { passive: false });
     
-        canvas.addEventListener('drop', handleDrop);
+        canvas.addEventListener('drop', this.handleDrop);
         canvas.addEventListener('dragenter', (e) => e.preventDefault());
         canvas.addEventListener('dragleave', (e) => e.preventDefault());
     
         document.addEventListener('drop', (e) => {
             if (isDragging) {
-                handleDrop(e);
+                this.handleDrop(e);
             }
         });
     
         document.addEventListener('dragend', (e) => {
             if (isDragging) {
                 debug.log("Dragend caught with active drag");
-                handleDrop(e);
+                this.handleDrop(e);
             }
         });
     }
@@ -2949,6 +3232,109 @@ class LoraSidebar {
             }
         };
 
+        const createVersionIdEditor = (lora, contentContainer) => {
+            // Only hide editor if both modelId and versionId are not null
+            if (lora.modelId !== null && lora.versionId !== null) return;
+        
+            let isEditing = false;
+        
+            const container = $el("div.version-id-container", [
+                $el("h4", { textContent: "Version ID:" })
+            ]);
+        
+            const displayContainer = $el("div.version-display");
+        
+            const updateDisplay = () => {
+                displayContainer.innerHTML = '';
+            
+                if (isEditing) {
+                    const input = $el("input.version-input", {
+                        type: "number",
+                        value: lora.versionId || "", // Show existing versionId if it exists
+                        placeholder: "Enter Version ID",
+                        onkeydown: (e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter') handleSave(e.target.value);
+                            if (e.key === 'Escape') {
+                                isEditing = false;
+                                updateDisplay();
+                            }
+                        },
+                        onclick: (e) => e.stopPropagation()
+                    });
+            
+                    const saveIcon = $el("i.version-save-icon.pi.pi-check", {
+                        onclick: (e) => {
+                            e.stopPropagation();
+                            handleSave(input.value);
+                        }
+                    });
+            
+                    displayContainer.appendChild(input);
+                    displayContainer.appendChild(saveIcon);
+                    setTimeout(() => input.focus(), 0);
+                } else {
+                    const valueSpan = $el("span.version-value", {
+                        // Show the actual versionId if it exists, otherwise "Custom"
+                        textContent: lora.versionId || "Custom"
+                    });
+            
+                    const editIcon = $el("i.version-edit-icon.pi.pi-pen-to-square", {
+                        onclick: (e) => {
+                            e.stopPropagation();
+                            isEditing = true;
+                            updateDisplay();
+                        }
+                    });
+            
+                    displayContainer.appendChild(valueSpan);
+                    displayContainer.appendChild(editIcon);
+                }
+            };
+       
+            const handleSave = async (value) => {
+                const versionId = parseInt(value);
+                if (isNaN(versionId) || versionId <= 0) {
+                    app.ui.dialog.show("Error", "Please enter a valid Version ID");
+                    return;
+                }
+        
+                try {
+                    const response = await api.fetchApi('/lora_sidebar/update_info', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: lora.id,
+                            field: 'versionId',
+                            value: versionId
+                        })
+                    });
+        
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        // Update local state
+                        lora.versionId = versionId;
+                        if (result.modelId) lora.modelId = result.modelId;
+                        
+                        // Remove the editor since we now have a valid versionId
+                        container.remove();
+                        
+                        // Refresh the LoRA info to fetch new data
+                        this.refreshLora(lora);
+                    } else {
+                        throw new Error(result.message || 'Failed to update Version ID');
+                    }
+                } catch (error) {
+                    console.error("Error updating Version ID:", error);
+                    this.showToast("error", "Update Failed", "Failed to update Version ID");
+                }
+            };
+        
+            container.appendChild(displayContainer);
+            updateDisplay();
+            return container;
+        };
+
         // nameContainer creation
         const nameContainer = $el("div.name-container");
 
@@ -3116,6 +3502,9 @@ class LoraSidebar {
         if (labelPills.children.length > 0) {
             nameContainer.appendChild(labelPills);
         }
+
+        const versionIdEditor = createVersionIdEditor.call(this, lora, contentContainer);
+        versionIdEditor && contentContainer.appendChild(versionIdEditor);
 
         // Add version information in a version container
         if (lora.versionName || lora.version_desc) {
@@ -4464,6 +4853,11 @@ class LoraSidebar {
         }
     }
 
+    updateSmartInfo(newVal) {
+        this.smartInfo = newVal;
+
+    }
+
     updateSortMethod(newVal) {
         this.SorthMethod = newVal;
         if (!this.isFirstOpen) {
@@ -4479,6 +4873,13 @@ class LoraSidebar {
         this.nsfwFolder = newVal;
         if (!this.isFirstOpen) {
             this.refreshSortedData();
+        }
+    }
+
+    updateNSFWstring(newVal) {
+        this.nsfwString = newVal;
+        if (!this.isFirstOpen && this.nsfwFolder) {
+            this.debounce(this.refreshSortedData(),2500);
         }
     }
 
@@ -4506,6 +4907,14 @@ class LoraSidebar {
     updateUseRG3(newVal) {
         this.UseRG3 = newVal;
     }
+
+    updateSmartEnabled(newVal) {
+        if (newVal) {
+            this.showToast("success", "LoRA Smart Info Enabled", 'Automatic LoRA Info & Previews are ON 💪');
+        } else {
+            this.showToast("warn", "LoRA Smart Info Disabled", 'Automatic LoRA Info & Previews are OFF 😢');
+        }
+    } 
 
 
     ////////
@@ -4563,6 +4972,9 @@ app.registerExtension({
     async setup() {
         const loraSidebar = new LoraSidebar(app);
         app.loraSidebar = loraSidebar;
+
+        // Add smart info feature after sidebar is created
+        loraSidebar.smartInfo = new LoraSmartInfo(loraSidebar);
 
         app.extensionManager.registerSidebarTab({
             id: "lora.sidebar",
@@ -4666,7 +5078,7 @@ app.registerExtension({
             name: "Use New Category",
             tooltip : 'Automatically creates special category for LoRAs created 3 days ago or less. (NOT downloaded, but actually created)',
             type: "boolean",
-            defaultValue: true,
+            defaultValue: false, //TODO DEFAULTED TO FALSE UNTIL I FIX IT
             onChange: (newVal, oldVal) => {
                 if (app.loraSidebar && oldVal !== undefined) {
                     app.loraSidebar.updateCatNew(newVal);
@@ -4807,15 +5219,128 @@ app.registerExtension({
             })()
         });
 
+        // SMART INFO STUFF
+
         app.ui.settings.addSetting({
-            id: "LoRA Sidebar.NSFW.hideNSFW",
-            name: "Show NSFW LoRAs",
-            tooltip : 'Uses the CivitAI NSFW flags which are not very reliable',
+            id: "LoRA Sidebar.Smart Info.showTrained",
+            name: "Trained Words on Canvas Previews",
+            tooltip: "Display trained words under Canvas Preview images",
             type: "boolean",
             defaultValue: true,
             onChange: (newVal, oldVal) => {
                 if (app.loraSidebar && oldVal !== undefined) {
-                    app.loraSidebar.updateShowNSFW(newVal);
+                    app.loraSidebar.smartInfo.updateShowTrained(newVal);
+                }
+            }
+        });
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.Smart Info.showSidebar",
+            name: "LoRA Info in Sidebar",
+            tooltip: "Automatically disaply LoRA Info when Sidebar is open",
+            type: "boolean",
+            defaultValue: true,
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.smartInfo.updateShowSidebar(newVal);
+                }
+            }
+        });
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.Smart Info.canvasPreview",
+            name: "LoRA Previews on Canvas",
+            tooltip: "Display LoRA Previews on the Canvas",
+            type: "boolean",
+            defaultValue: true,
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.smartInfo.updateShowOnCanvas(newVal);
+                }
+            }
+        });
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.Smart Info.menuPreview",
+            name: "LoRA Previews on Menus",
+            tooltip: "Display LoRA preview images while using selection menus",
+            type: "boolean",
+            defaultValue: true,
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.smartInfo.updateShowOnMenu(newVal);
+                }
+            }
+        });
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.Smart Info.zoomLevel",
+            name: "Zoom Cutoff for Previews (in %)",
+            tooltip: "Sets the zoom level where we turn off LoRA canvas previews",
+            type: "slider",
+            defaultValue: 50,
+            attrs: { min: 1, max: 100, step: 5, },
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.smartInfo.updateZoomLevel(newVal);
+                    debug.log("Updated Zoom:", newVal);
+                }
+            },
+        });
+
+
+        let lastProcessed = { newVal: undefined, oldVal: undefined };
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.Smart Info.smartEnabled",
+            name: "Smart Info Feature",
+            tooltip: "Automagically show LoRA previews and info when working with LoRA nodes. (Disabling this will automatically Disable ALL other Smart Info features)",
+            type: "boolean",
+            defaultValue: true,
+            onChange: (newVal, oldVal) => {
+                // Check if this change has already been processed
+                if (newVal === lastProcessed.newVal && oldVal === lastProcessed.oldVal) {
+                    // This change has already been processed, skip
+                    debug.log("COMFYUI FIX YOUR SHIT - Duplicate onChange call detected, skipping.");
+                    return;
+                }
+        
+                // Update last processed values
+                lastProcessed.newVal = newVal;
+                lastProcessed.oldVal = oldVal;
+        
+                debug.log("Settings onChange called with:", { newVal, oldVal });
+        
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.smartInfo.updateSettings(newVal);
+                    app.loraSidebar.updateSmartEnabled(newVal);
+                }
+            }
+        });
+
+        // NSFW STUFF
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.NSFW.folderString",
+            name: "NSFW Folder Name",
+            tooltip : 'Name of the folder(s) to use for NSFW folder checks.',
+            type: 'text',
+            defaultValue: 'NSFW',
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.updateNSFWstring(newVal);
+                }
+            }
+        });
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.NSFW.nsfwFolder",
+            name: "Use NSFW Folders",
+            tooltip : 'Flags LoRAs as NSFW if they are in a folder containing "NSFW" (Ignores saved NSFW Flags).',
+            type: "boolean",
+            defaultValue: true,
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.updateNSFWfolder(newVal);
                 }
             }
         });
@@ -4835,14 +5360,14 @@ app.registerExtension({
         });
 
         app.ui.settings.addSetting({
-            id: "LoRA Sidebar.NSFW.nsfwFolder",
-            name: "Use NSFW Folders",
-            tooltip : 'Flags LoRAs as NSFW if they are in a folder containing "NSFW" (Ignores saved NSFW Flags).',
+            id: "LoRA Sidebar.NSFW.hideNSFW",
+            name: "Show NSFW LoRAs",
+            tooltip : 'Uses the CivitAI NSFW flags which are not very reliable',
             type: "boolean",
             defaultValue: true,
             onChange: (newVal, oldVal) => {
                 if (app.loraSidebar && oldVal !== undefined) {
-                    app.loraSidebar.updateNSFWfolder(newVal);
+                    app.loraSidebar.updateShowNSFW(newVal);
                 }
             }
         });
