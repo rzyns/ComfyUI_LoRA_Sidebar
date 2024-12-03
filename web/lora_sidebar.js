@@ -13,6 +13,11 @@ var debug = {
 };
 
 class LoraSidebar {
+    #loraLoaderNodeName = "Power Lora Loader (rgthree)";
+    get loraLoaderNodeName() {
+        return this.#loraLoaderNodeName;
+    }
+
     constructor(app) {
         this.app = app;
 
@@ -60,7 +65,8 @@ class LoraSidebar {
         this.tagSource = app.ui.settings.getSettingValue("LoRA Sidebar.General.tagSource", "CivitAI");
         debug.log("Tag source:", this.tagSource);
         this.a1111Style = app.ui.settings.getSettingValue("LoRA Sidebar.General.a1111Style", false);
-        this.UseRG3 = app.ui.settings.getSettingValue("LoRA Sidebar.General.useRG3", false);
+        this.useCustomLoraLoaderNode = app.ui.settings.getSettingValue("LoRA Sidebar.General.useCustomLoraLoaderNode", false);
+        this.#loraLoaderNodeName = app.ui.settings.getSettingValue("LoRA Sidebar.General.customLoraLoaderNodeName", false);
         this.infoPersist = app.ui.settings.getSettingValue("LoRA Sidebar.General.infoPersist", true);
         this.loadingOverlay = this.createLoadingOverlay();
         this.lastLoadOffset = 0;
@@ -2275,7 +2281,7 @@ class LoraSidebar {
                     const nodeData = {
                         name: loraData.name,
                         reco_weight: loraData.reco_weight,
-                        path: loraData.subdir || "",
+                        path: loraData.subdir || loraData.path.split("models\\loras\\")[1].split("\\").slice(0, -1).join("\\"),
                         filename: filename,
                         trainedWords: loraData.trained_words
                     };
@@ -2293,7 +2299,7 @@ class LoraSidebar {
                             const node = app.graph.getNodeOnPos(dropX, dropY);
                     
                             if (node) {
-                                if (node.type === "LoraLoader" || node.type === "Power Lora Loader (rgthree)") {
+                                if (node.type === "LoraLoader" || (node.type === this.loraLoaderNodeName && this.#loraLoaderNodeName !== "Power Lora Loader (rgthree)")) {
                                     this.updateLoraNode(node, loraData);
                                     debug.log("Successfully updated node");
                                 } else if (nodeData.trainedWords?.length > 0) {
@@ -2383,11 +2389,15 @@ class LoraSidebar {
         });
     }
     
-    
+    updateCustomLoraLoaderNodeName(newVal) {
+        this.#loraLoaderNodeName = newVal;
+    }
+
     createLoraNode(loraData, x, y) {
-        if (this.UseRG3) {
+        console.log(loraData);
+        if (this.useCustomLoraLoaderNode && this.loraLoaderNodeName === "Power Lora Loader (rgthree)") {
             // Create Power Lora Loader node
-            const node = LiteGraph.createNode("Power Lora Loader (rgthree)");
+            const node = LiteGraph.createNode(this.loraLoaderNodeName);
             node.pos = [x, y];
             
             // Add the node to the graph (this needs to happen before we add widgets)
@@ -2420,7 +2430,7 @@ class LoraSidebar {
             node.setDirtyCanvas(true, true);
         } else {
             // Original LoraLoader code
-            const node = LiteGraph.createNode("LoraLoader");
+            const node = LiteGraph.createNode(this.useCustomLoraLoaderNode ? this.loraLoaderNodeName : "LoraLoader");
             node.pos = [x, y];
             
             // Set node title
@@ -2457,9 +2467,10 @@ class LoraSidebar {
         // name hack
         const fullPath = loraData.path || "";
         const filename = fullPath.substring(fullPath.lastIndexOf('\\') + 1);
+        console.log("updateLoraNode(): filename:", filename)
 
         // Handle different node types
-        if (node.type === "LoraLoader") {
+        if (node.type === "LoraLoader" || (node.type === this.loraLoaderNodeName && this.loraLoaderNodeName !== "Power Lora Loader (rgthree)")) {
             // Update the node title
             node.title = `Lora - ${loraData.name}`;
             
@@ -4904,8 +4915,8 @@ class LoraSidebar {
         this.a1111Style = newVal;
     }
 
-    updateUseRG3(newVal) {
-        this.UseRG3 = newVal;
+    updateUseCustomLoraLoaderNode(newVal) {
+        this.useCustomLoraLoaderNode = newVal;
     }
 
     updateSmartEnabled(newVal) {
@@ -5061,14 +5072,27 @@ app.registerExtension({
         });
 
         app.ui.settings.addSetting({
-            id: "LoRA Sidebar.General.useRG3",
-            name: "Use rgthree Nodes",
+            id: "LoRA Sidebar.General.useCustomLoraLoaderNode",
+            name: "Use custom LoRA loader nodes",
             tooltip : 'Creates a Lora Power Loader Node on drag and drop vs a core node',
             type: "boolean",
             defaultValue: false,
             onChange: (newVal, oldVal) => {
                 if (app.loraSidebar && oldVal !== undefined) {
-                    app.loraSidebar.updateUseRG3(newVal);
+                    app.loraSidebar.updateUseCustomLoraLoaderNode(newVal);
+                }
+            }
+        });
+
+        app.ui.settings.addSetting({
+            id: "LoRA Sidebar.General.customLoraLoaderNodeName",
+            name: "Custom LoRA loader node name",
+            tooltip : "The name of the custom node to use for loading LoRAs",
+            type: "text",
+            defaultValue: "Power Lora Loader (rgthree)",
+            onChange: (newVal, oldVal) => {
+                if (app.loraSidebar && oldVal !== undefined) {
+                    app.loraSidebar.updateCustomLoraLoaderNodeName(newVal);
                 }
             }
         });

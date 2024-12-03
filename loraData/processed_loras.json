@@ -1,4 +1,1898 @@
 {
-    "loras": [],
+    "version": 2,
+    "loras": [
+        {
+            "filename": "3D slider Lion_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\3D slider Lion_last.safetensors"
+        },
+        {
+            "filename": "3dSliderPony_v10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\3dSliderPony_v10.safetensors"
+        },
+        {
+            "filename": "abs slider_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\abs slider_last.safetensors"
+        },
+        {
+            "filename": "Age Slider V2_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Age Slider V2_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "AntiBeard_Slider_Flux1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\AntiBeard_Slider_Flux1.safetensors"
+        },
+        {
+            "filename": "Ass Adjust_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Ass Adjust_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Ass slider _last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Ass slider _last.safetensors"
+        },
+        {
+            "filename": "Beautiful face_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Beautiful face_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "big_eyes_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\big_eyes_v1.safetensors"
+        },
+        {
+            "filename": "BlackLatexSlider_000000950",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\BlackLatexSlider_000000950.safetensors"
+        },
+        {
+            "filename": "Blowjob Depth_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Blowjob Depth_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Body Tattoo Pony_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Body Tattoo Pony_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Body Type_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Body Type_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Body weight slider 2_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Body weight slider 2_last.safetensors"
+        },
+        {
+            "filename": "Bra Tittjob_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Bra Tittjob_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "BrainwashSlider_seductive_000000950",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\BrainwashSlider_seductive_000000950.safetensors"
+        },
+        {
+            "filename": "Breast Sag Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Breast Sag Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Breast Slider - Pony_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Breast Slider - Pony_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "breasts gravity slider_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\breasts gravity slider_last.safetensors"
+        },
+        {
+            "filename": "Breasts slider 3_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Breasts slider 3_last.safetensors"
+        },
+        {
+            "filename": "breasts slider flux v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\breasts slider flux v1.safetensors"
+        },
+        {
+            "filename": "breasts_size_slider_pdxl_goofy",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\breasts_size_slider_pdxl_goofy.safetensors"
+        },
+        {
+            "filename": "Bubble Butt_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Bubble Butt_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "cfg_scale_boost",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\cfg_scale_boost.safetensors"
+        },
+        {
+            "filename": "Cleavage Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Cleavage Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Clothed Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Clothed Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Colorful Hair Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Colorful Hair Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "ColorRoughSlider",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\ColorRoughSlider.safetensors"
+        },
+        {
+            "filename": "CorruptionSlider7_mk2_000000850",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\CorruptionSlider7_mk2_000000850.safetensors"
+        },
+        {
+            "filename": "cum slider 2 _last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\cum slider 2 _last.safetensors"
+        },
+        {
+            "filename": "cumip",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\cumip.safetensors"
+        },
+        {
+            "filename": "curvature slider_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\curvature slider_last.safetensors"
+        },
+        {
+            "filename": "db0_realism",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\db0_realism.safetensors"
+        },
+        {
+            "filename": "detailed_v2_flux_ntc",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\detailed_v2_flux_ntc.safetensors"
+        },
+        {
+            "filename": "Dildo Size Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Dildo Size Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Double Penetration_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Double Penetration_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "DynamicPose_alpha1.0_rank4_noxattn_100steps",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\DynamicPose_alpha1.0_rank4_noxattn_100steps.safetensors"
+        },
+        {
+            "filename": "edgy_fashionista_flux_ntc_v2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\edgy_fashionista_flux_ntc_v2.safetensors"
+        },
+        {
+            "filename": "Eye size Slider - PNY_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Eye size Slider - PNY_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Facial Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Facial Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Forehead Hair Length Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Forehead Hair Length Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Freckles Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Freckles Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Furryfication Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Furryfication Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Gape slider_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Gape slider_last.safetensors"
+        },
+        {
+            "filename": "gape_size_slider_pdxl_goofy",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\gape_size_slider_pdxl_goofy.safetensors"
+        },
+        {
+            "filename": "Girl Size_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Girl Size_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Goth_girl_XL-v2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Goth_girl_XL-v2.safetensors"
+        },
+        {
+            "filename": "Group (2)",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Group (2).safetensors"
+        },
+        {
+            "filename": "Hair Length Slider - PNY_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Hair Length Slider - PNY_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "happy_ntc_flux",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\happy_ntc_flux.safetensors"
+        },
+        {
+            "filename": "HeadLeftRight",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\HeadLeftRight.safetensors"
+        },
+        {
+            "filename": "Insertion Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Insertion Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "ip-adapter-faceid-plusv2_sd15_lora",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\ip-adapter-faceid-plusv2_sd15_lora.safetensors"
+        },
+        {
+            "filename": "ip-adapter-faceid-plusv2_sdxl_lora",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\ip-adapter-faceid-plusv2_sdxl_lora.safetensors"
+        },
+        {
+            "filename": "ip-adapter-faceid_sd15_lora",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\ip-adapter-faceid_sd15_lora.safetensors"
+        },
+        {
+            "filename": "ip-adapter-faceid_sdxl_lora",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\ip-adapter-faceid_sdxl_lora.safetensors"
+        },
+        {
+            "filename": "jewelry Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\jewelry Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "jitome_pony_v01Ca",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\jitome_pony_v01Ca.safetensors"
+        },
+        {
+            "filename": "Leg Length Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Leg Length Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "lighting Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\lighting Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Lip size Slider V2_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Lip size Slider V2_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Makeup Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Makeup Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "masculinity_slider",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\masculinity_slider.safetensors"
+        },
+        {
+            "filename": "mature_youthful",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\mature_youthful.safetensors"
+        },
+        {
+            "filename": "Mouth Opening Slider - PNY_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Mouth Opening Slider - PNY_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Muscle slider 3_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Muscle slider 3_last.safetensors"
+        },
+        {
+            "filename": "muscular",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\muscular.safetensors"
+        },
+        {
+            "filename": "Nipple Size Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Nipple Size Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "pantyhose_slider_pony_v03a",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pantyhose_slider_pony_v03a.safetensors"
+        },
+        {
+            "filename": "pecslider_scale_4",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pecslider_scale_4.safetensors"
+        },
+        {
+            "filename": "Penis BendV3_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Penis BendV3_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Penis Bulge Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Penis Bulge Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Penis Size_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Penis Size_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Penis Thickness Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Penis Thickness Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "ponyxl-deep_penetration-concept-v01",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\ponyxl-deep_penetration-concept-v01.safetensors"
+        },
+        {
+            "filename": "PP slider_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\PP slider_last.safetensors"
+        },
+        {
+            "filename": "Pubic Hair Slider - Pony_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Pubic Hair Slider - Pony_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Pubic hair slider 2_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Pubic hair slider 2_last.safetensors"
+        },
+        {
+            "filename": "pytorch_lora_weights",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\segmind-vega\\pytorch_lora_weights.safetensors"
+        },
+        {
+            "filename": "ShinySkinSlider3.0_800steps",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\ShinySkinSlider3.0_800steps.safetensors"
+        },
+        {
+            "filename": "shinyskinv2b",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\shinyskinv2b.safetensors"
+        },
+        {
+            "filename": "Skin Color_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Skin Color_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Skin Tone Slider flux v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Skin Tone Slider flux v1.safetensors"
+        },
+        {
+            "filename": "skin tone slider_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\skin tone slider_last.safetensors"
+        },
+        {
+            "filename": "Skinny - Muscular Slider - PNY_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Skinny - Muscular Slider - PNY_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "skin_color_slider_pdxl_goofy",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\skin_color_slider_pdxl_goofy.safetensors"
+        },
+        {
+            "filename": "Skirt Length_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Skirt Length_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Slider_human-anthro_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Slider_human-anthro_v1.safetensors"
+        },
+        {
+            "filename": "Solo - Crowd Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Solo - Crowd Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "StS-Breast-Enlarger-Slider-PonyXL-v0.8",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\StS-Breast-Enlarger-Slider-PonyXL-v0.8.safetensors"
+        },
+        {
+            "filename": "StS-PonyXL-Skin_Tone_Slider-v1.2-BETA",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\StS-PonyXL-Skin_Tone_Slider-v1.2-BETA.safetensors"
+        },
+        {
+            "filename": "StS_age_slider_v1_initial_release",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\StS_age_slider_v1_initial_release.safetensors"
+        },
+        {
+            "filename": "StS_DoF_Bokeh_Slider_v0.9",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\StS_DoF_Bokeh_Slider_v0.9.safetensors"
+        },
+        {
+            "filename": "StS_PonyXL_Detail_Slider_v1.4_iteration_3",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\StS_PonyXL_Detail_Slider_v1.4_iteration_3.safetensors"
+        },
+        {
+            "filename": "Testicle size Slider V2_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Testicle size Slider V2_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "Thigh Size Slider V2_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Thigh Size Slider V2_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "thighs slider_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\thighs slider_last.safetensors"
+        },
+        {
+            "filename": "tight_clothes_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\tight_clothes_v1.safetensors"
+        },
+        {
+            "filename": "Traditional_art_v4_USENEG",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Traditional_art_v4_USENEG.safetensors"
+        },
+        {
+            "filename": "Tylee-Ill-000012",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\Tylee-Ill-000012.safetensors"
+        },
+        {
+            "filename": "Vagina Size Slider_alpha1.0_rank4_noxattn_last",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\Vagina Size Slider_alpha1.0_rank4_noxattn_last.safetensors"
+        },
+        {
+            "filename": "WhatIsThis_slider",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\WhatIsThis_slider.safetensors"
+        },
+        {
+            "filename": "xl_color_temp",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\xl_color_temp.safetensors"
+        },
+        {
+            "filename": "ZombieXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\ZombieXL.safetensors"
+        },
+        {
+            "filename": "2BoutOvalFlux1-1400steps",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\2BoutOvalFlux1-1400steps.safetensors"
+        },
+        {
+            "filename": "aeshteticv5",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\aeshteticv5.safetensors"
+        },
+        {
+            "filename": "AnimeRetroFantasy",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\AnimeRetroFantasy.safetensors"
+        },
+        {
+            "filename": "arcane-style-2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\arcane-style-2.safetensors"
+        },
+        {
+            "filename": "breastmassagev1_FLUX",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\breastmassagev1_FLUX.safetensors"
+        },
+        {
+            "filename": "CharacterDesign-FluxV2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\CharacterDesign-FluxV2.safetensors"
+        },
+        {
+            "filename": "dpmpFLUX",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\dpmpFLUX.safetensors"
+        },
+        {
+            "filename": "Dynamic Poses5952",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\Dynamic Poses5952.safetensors"
+        },
+        {
+            "filename": "FFMMDoggyFLUX",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\FFMMDoggyFLUX.safetensors"
+        },
+        {
+            "filename": "Flux.Katarina_v01",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\Flux.Katarina_v01.safetensors"
+        },
+        {
+            "filename": "FluxJinxV2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\FluxJinxV2.safetensors"
+        },
+        {
+            "filename": "holographic projection",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\holographic projection.safetensors"
+        },
+        {
+            "filename": "hourglassv2_flux",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\hourglassv2_flux.safetensors"
+        },
+        {
+            "filename": "hyperdream_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\hyperdream_v1.safetensors"
+        },
+        {
+            "filename": "ilaydaakdogan",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\ilaydaakdogan.safetensors"
+        },
+        {
+            "filename": "lora.TA_trained",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\lora.TA_trained.safetensors"
+        },
+        {
+            "filename": "m41s4-f1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\m41s4-f1.safetensors"
+        },
+        {
+            "filename": "pyros_pmi.1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\pyros_pmi.1.safetensors"
+        },
+        {
+            "filename": "pyros_pmi",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\pyros_pmi.safetensors"
+        },
+        {
+            "filename": "ridingsexscene_Flux_SMF_V01",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\ridingsexscene_Flux_SMF_V01.safetensors"
+        },
+        {
+            "filename": "sex_from_behind_FLUX-000012",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\sex_from_behind_FLUX-000012.safetensors"
+        },
+        {
+            "filename": "Starfire",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\Starfire.safetensors"
+        },
+        {
+            "filename": "Syndra-000007",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\Syndra-000007.safetensors"
+        },
+        {
+            "filename": "Tentacle_dicks_Realistic_FLUX",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\Tentacle_dicks_Realistic_FLUX.safetensors"
+        },
+        {
+            "filename": "uscifi_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\flux\\uscifi_v1.safetensors"
+        },
+        {
+            "filename": "ambergenshin",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\ambergenshin.safetensors"
+        },
+        {
+            "filename": "Aria Wintermint (Parororo) [Illustrious]_epoch_4",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\Aria Wintermint (Parororo) [Illustrious]_epoch_4.safetensors"
+        },
+        {
+            "filename": "AzasukeWind",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\AzasukeWind.safetensors"
+        },
+        {
+            "filename": "behind-bottom-up",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\behind-bottom-up.safetensors"
+        },
+        {
+            "filename": "Cecia_AFK",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\Cecia_AFK.safetensors"
+        },
+        {
+            "filename": "CharacterDesignIllustrious_Concept-10V2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\CharacterDesignIllustrious_Concept-10V2.safetensors"
+        },
+        {
+            "filename": "Gigantic_Penis__Illustrious__Concept-000010",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\Gigantic_Penis__Illustrious__Concept-000010.safetensors"
+        },
+        {
+            "filename": "Harley_Quinn_cartoon_ILLUS-000009",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\Harley_Quinn_cartoon_ILLUS-000009.safetensors"
+        },
+        {
+            "filename": "Hawkgirl_ILLUS_3-000009",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\Hawkgirl_ILLUS_3-000009.safetensors"
+        },
+        {
+            "filename": "JN_Hestia_Illus",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\JN_Hestia_Illus.safetensors"
+        },
+        {
+            "filename": "KaisaIllustriousXL_byKonan",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\KaisaIllustriousXL_byKonan.safetensors"
+        },
+        {
+            "filename": "kentaro_miura_style_illustriousXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\kentaro_miura_style_illustriousXL.safetensors"
+        },
+        {
+            "filename": "L0LSPL4SH_IllustriousXLv01.1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\L0LSPL4SH_IllustriousXLv01.1.safetensors"
+        },
+        {
+            "filename": "L0LSPL4SH_IllustriousXLv01",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\L0LSPL4SH_IllustriousXLv01.safetensors"
+        },
+        {
+            "filename": "liqing_noob",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\liqing_noob.safetensors"
+        },
+        {
+            "filename": "mgmmzillustrious01",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\mgmmzillustrious01.safetensors"
+        },
+        {
+            "filename": "NicoleDemaraIXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\NicoleDemaraIXL.safetensors"
+        },
+        {
+            "filename": "NOOB_EPSv1_detailer_by_vlnvk_v0_5",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\NOOB_EPSv1_detailer_by_vlnvk_v0_5.safetensors"
+        },
+        {
+            "filename": "Priscilla2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\Priscilla2.safetensors"
+        },
+        {
+            "filename": "pubic tattoo_illustrious_V1.0",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\pubic tattoo_illustrious_V1.0.safetensors"
+        },
+        {
+            "filename": "reacharoundfootjob-rearfj-illustriousXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\reacharoundfootjob-rearfj-illustriousXL.safetensors"
+        },
+        {
+            "filename": "satouKuukiXL_il_lokr_V53P1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\satouKuukiXL_il_lokr_V53P1.safetensors"
+        },
+        {
+            "filename": "Starfire_DCAMU_ILLUS-000010",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\Starfire_DCAMU_ILLUS-000010.safetensors"
+        },
+        {
+            "filename": "Tamamo-10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\il\\Tamamo-10.safetensors"
+        },
+        {
+            "filename": "32dim-FN_Helsie-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\32dim-FN_Helsie-PONY.safetensors"
+        },
+        {
+            "filename": "3Danimation_Disney_1.0",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\3Danimation_Disney_1.0.safetensors"
+        },
+        {
+            "filename": "ahri-05",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\ahri-05.safetensors"
+        },
+        {
+            "filename": "Ahri",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri.safetensors"
+        },
+        {
+            "filename": "AhriAllInOne_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\AhriAllInOne_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_Academy_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_Academy_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_Arcade_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_Arcade_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_Arcana_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_Arcana_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_Challenger_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_Challenger_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_Coven_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_Coven_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_Dynasty_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_Dynasty_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_Elderwood_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_Elderwood_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_Foxfire_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_Foxfire_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_ImmortalizedLegend_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_ImmortalizedLegend_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_KDAAllOut_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_KDAAllOut_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_KDAPE_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_KDAPE_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_KDA_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_KDA_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_Midnight_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_Midnight_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_Popstar_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_Popstar_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_RisenLegend_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_RisenLegend_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_SnowMoon_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_SnowMoon_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_SpiritBlossom_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_SpiritBlossom_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_StarGuardian_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_StarGuardian_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "Ahri_the_Nine-Tailed_Fox_League_of_Legends",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_the_Nine-Tailed_Fox_League_of_Legends.safetensors"
+        },
+        {
+            "filename": "Ahri_WinterQueen_pdxl_Incrs_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ahri_WinterQueen_pdxl_Incrs_v1.safetensors"
+        },
+        {
+            "filename": "airtight-000008",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\airtight-000008.safetensors"
+        },
+        {
+            "filename": "airtight",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\airtight.safetensors"
+        },
+        {
+            "filename": "akali",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\akali.safetensors"
+        },
+        {
+            "filename": "AkaliSDXL-10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\AkaliSDXL-10.safetensors"
+        },
+        {
+            "filename": "AkaliSGXL - by KillerUwU13_AI",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\AkaliSGXL - by KillerUwU13_AI.safetensors"
+        },
+        {
+            "filename": "Amazonian_Position_SDXL_DMX_v01",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Amazonian_Position_SDXL_DMX_v01.safetensors"
+        },
+        {
+            "filename": "Amplected_3d_anime_art_style",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Amplected_3d_anime_art_style.safetensors"
+        },
+        {
+            "filename": "arcademf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\arcademf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "ArcanaXayah",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\ArcanaXayah.safetensors"
+        },
+        {
+            "filename": "arched_back_tentacle",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\arched_back_tentacle.safetensors"
+        },
+        {
+            "filename": "Artistic_Style_v6",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Artistic_Style_v6.safetensors"
+        },
+        {
+            "filename": "Ashe_v1-00010",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ashe_v1-00010.safetensors"
+        },
+        {
+            "filename": "Assisted_shirt_lift",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Assisted_shirt_lift.safetensors"
+        },
+        {
+            "filename": "asuna_sao_pony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\asuna_sao_pony.safetensors"
+        },
+        {
+            "filename": "BADAbadasengsu__r1-000034",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\BADAbadasengsu__r1-000034.safetensors"
+        },
+        {
+            "filename": "Balls_Deep_V3LL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Balls_Deep_V3LL.safetensors"
+        },
+        {
+            "filename": "battlebunnymf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\battlebunnymf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "Battle_Academia_Caitlyn_PonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Battle_Academia_Caitlyn_PonyXL.safetensors"
+        },
+        {
+            "filename": "Battle_Bunny_Akali_-_League_of_Legends_-_Pony-000002",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Battle_Bunny_Akali_-_League_of_Legends_-_Pony-000002.safetensors"
+        },
+        {
+            "filename": "Beth_by_IkariRH",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Beth_by_IkariRH.safetensors"
+        },
+        {
+            "filename": "Between pencils and semi-realism",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Between pencils and semi-realism.safetensors"
+        },
+        {
+            "filename": "bewitchedmfXL-06",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\bewitchedmfXL-06.safetensors"
+        },
+        {
+            "filename": "bewitchingmf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\bewitchingmf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "Bewitching_Miss_Fortune_PonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Bewitching_Miss_Fortune_PonyXL.safetensors"
+        },
+        {
+            "filename": "Bewitching_Morgana_PonyXL_r2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Bewitching_Morgana_PonyXL_r2.safetensors"
+        },
+        {
+            "filename": "Blacklight_XL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Blacklight_XL.safetensors"
+        },
+        {
+            "filename": "Blood_Rayne",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Blood_Rayne.safetensors"
+        },
+        {
+            "filename": "BNHA_PopStep-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\BNHA_PopStep-PONY.safetensors"
+        },
+        {
+            "filename": "BnS_Yuran-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\BnS_Yuran-PONY.safetensors"
+        },
+        {
+            "filename": "BodyMod_EPST-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\BodyMod_EPST-PONY.safetensors"
+        },
+        {
+            "filename": "Bus_interior_fun",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Bus_interior_fun.safetensors"
+        },
+        {
+            "filename": "BW_Elise",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\BW_Elise.safetensors"
+        },
+        {
+            "filename": "caitlyn-05",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\caitlyn-05.safetensors"
+        },
+        {
+            "filename": "captainmf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\captainmf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "Captured_by_werewolf-000008",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Captured_by_werewolf-000008.safetensors"
+        },
+        {
+            "filename": "Celeste_by_IkariRH",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Celeste_by_IkariRH.safetensors"
+        },
+        {
+            "filename": "chai_xianghua",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\chai_xianghua.safetensors"
+        },
+        {
+            "filename": "ChamAkaliNeonPonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\ChamAkaliNeonPonyXL.safetensors"
+        },
+        {
+            "filename": "ChamAkaliPonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\ChamAkaliPonyXL.safetensors"
+        },
+        {
+            "filename": "character_sheet",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\character_sheet.safetensors"
+        },
+        {
+            "filename": "checkpoint-e36_s756",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\checkpoint-e36_s756.safetensors"
+        },
+        {
+            "filename": "Chokehold_Doggystyle",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Chokehold_Doggystyle.safetensors"
+        },
+        {
+            "filename": "Classic_Katarina_PonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Classic_Katarina_PonyXL.safetensors"
+        },
+        {
+            "filename": "closeprone",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\closeprone.safetensors"
+        },
+        {
+            "filename": "Club Sex",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Club Sex.safetensors"
+        },
+        {
+            "filename": "Concept_Dangling_legs",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Concept_Dangling_legs.safetensors"
+        },
+        {
+            "filename": "Concept_PantyPull-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Concept_PantyPull-PONY.safetensors"
+        },
+        {
+            "filename": "concept_sexwristarmgrab_ponyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\concept_sexwristarmgrab_ponyXL.safetensors"
+        },
+        {
+            "filename": "Cortana",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Cortana.safetensors"
+        },
+        {
+            "filename": "CortanaH2A",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\CortanaH2A.safetensors"
+        },
+        {
+            "filename": "Cortana_XL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Cortana_XL.safetensors"
+        },
+        {
+            "filename": "cowgirl_position_nonpov_pony-000010",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\cowgirl_position_nonpov_pony-000010.safetensors"
+        },
+        {
+            "filename": "crimecitymf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\crimecitymf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "cumtrail_pulling_outv3.0_r1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\cumtrail_pulling_outv3.0_r1.safetensors"
+        },
+        {
+            "filename": "cum_in_wearing_panties",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\cum_in_wearing_panties.safetensors"
+        },
+        {
+            "filename": "cyberpink-v2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\cyberpink-v2.safetensors"
+        },
+        {
+            "filename": "CyberPsycho_Extended-000021",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\CyberPsycho_Extended-000021.safetensors"
+        },
+        {
+            "filename": "d4phn3_prod_ponyxl-000060 (1)",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\d4phn3_prod_ponyxl-000060 (1).safetensors"
+        },
+        {
+            "filename": "d4rkv1b3XLP",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\d4rkv1b3XLP.safetensors"
+        },
+        {
+            "filename": "DABS",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\DABS.safetensors"
+        },
+        {
+            "filename": "Danganrompa",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Danganrompa.safetensors"
+        },
+        {
+            "filename": "Dateach",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Dateach.safetensors"
+        },
+        {
+            "filename": "defaultmf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\defaultmf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "Derpixon-48",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Derpixon-48.safetensors"
+        },
+        {
+            "filename": "derpixon_style_ponyXL_v1_resized",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\derpixon_style_ponyXL_v1_resized.safetensors"
+        },
+        {
+            "filename": "dildoV1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\dildoV1.safetensors"
+        },
+        {
+            "filename": "Double Vaginal-000009",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Double Vaginal-000009.safetensors"
+        },
+        {
+            "filename": "Dr._Mundo",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Dr._Mundo.safetensors"
+        },
+        {
+            "filename": "Elementalist Lux Air",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Elementalist Lux Air.safetensors"
+        },
+        {
+            "filename": "Elementalist Lux Base",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Elementalist Lux Base.safetensors"
+        },
+        {
+            "filename": "Elementalist Lux Dark",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Elementalist Lux Dark.safetensors"
+        },
+        {
+            "filename": "Elementalist Lux Fire",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Elementalist Lux Fire.safetensors"
+        },
+        {
+            "filename": "Elementalist Lux Ice",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Elementalist Lux Ice.safetensors"
+        },
+        {
+            "filename": "eliseXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\eliseXL.safetensors"
+        },
+        {
+            "filename": "Emirichu-10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Emirichu-10.safetensors"
+        },
+        {
+            "filename": "EnvyPonyPrettyEyes01",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\EnvyPonyPrettyEyes01.safetensors"
+        },
+        {
+            "filename": "EPllNeeko",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\EPllNeeko.safetensors"
+        },
+        {
+            "filename": "evelyn",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\evelyn.safetensors"
+        },
+        {
+            "filename": "explodingclothes_pony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\explodingclothes_pony.safetensors"
+        },
+        {
+            "filename": "Expressive_H-000001",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Expressive_H-000001.safetensors"
+        },
+        {
+            "filename": "f3mp0vXLP",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\f3mp0vXLP.safetensors"
+        },
+        {
+            "filename": "FaeDragonAshe",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\FaeDragonAshe.safetensors"
+        },
+        {
+            "filename": "Femdom_Sandwich_FFM_Threesome-000009",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Femdom_Sandwich_FFM_Threesome-000009.safetensors"
+        },
+        {
+            "filename": "FFMMdoggykiss111",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\FFMMdoggykiss111.safetensors"
+        },
+        {
+            "filename": "FFMMDoubleMissionaryV1.0-000010",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\FFMMDoubleMissionaryV1.0-000010.safetensors"
+        },
+        {
+            "filename": "FFM_threesome__1st_girl_on_top_with_2nd_licking_penisvagina",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\FFM_threesome__1st_girl_on_top_with_2nd_licking_penisvagina.safetensors"
+        },
+        {
+            "filename": "Fiora_Headmistress_PulseFire_Project_Fiora_From_League_Of_Legends",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Fiora_Headmistress_PulseFire_Project_Fiora_From_League_Of_Legends.safetensors"
+        },
+        {
+            "filename": "FN_Shiver-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\FN_Shiver-PONY.safetensors"
+        },
+        {
+            "filename": "fox_girl_pony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\fox_girl_pony.safetensors"
+        },
+        {
+            "filename": "Franka.1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Franka.1.safetensors"
+        },
+        {
+            "filename": "Franka",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Franka.safetensors"
+        },
+        {
+            "filename": "Full_uterus_after_sex-000005",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Full_uterus_after_sex-000005.safetensors"
+        },
+        {
+            "filename": "fumihiko_r2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\fumihiko_r2.safetensors"
+        },
+        {
+            "filename": "Futurenijiimadness-02",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Futurenijiimadness-02.safetensors"
+        },
+        {
+            "filename": "g0th1c2XLP.1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\g0th1c2XLP.1.safetensors"
+        },
+        {
+            "filename": "g0th1c2XLP",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\g0th1c2XLP.safetensors"
+        },
+        {
+            "filename": "Gangbang",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Gangbang.safetensors"
+        },
+        {
+            "filename": "Gangbangs and Creampies",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Gangbangs and Creampies.safetensors"
+        },
+        {
+            "filename": "Giantess_Building_Fuck",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Giantess_Building_Fuck.safetensors"
+        },
+        {
+            "filename": "Ginger_by_IkariRH",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ginger_by_IkariRH.safetensors"
+        },
+        {
+            "filename": "Ginny_Weasley__Not_Bonnie_Wright",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Ginny_Weasley__Not_Bonnie_Wright.safetensors"
+        },
+        {
+            "filename": "girl_on_top-000010",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\girl_on_top-000010.safetensors"
+        },
+        {
+            "filename": "Glaciela__Final_fantasy_War_of_the_visions",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Glaciela__Final_fantasy_War_of_the_visions.safetensors"
+        },
+        {
+            "filename": "groping_poses-000009",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\groping_poses-000009.safetensors"
+        },
+        {
+            "filename": "Group (2).1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Group (2).1.safetensors"
+        },
+        {
+            "filename": "Guided_Breast_Grab_By_Stable_Yogi_PONY0_V1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Guided_Breast_Grab_By_Stable_Yogi_PONY0_V1.safetensors"
+        },
+        {
+            "filename": "GunGoddess SarahFortune",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\GunGoddess SarahFortune.safetensors"
+        },
+        {
+            "filename": "gungoddessmf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\gungoddessmf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "GwenTenXL-10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\GwenTenXL-10.safetensors"
+        },
+        {
+            "filename": "Hanging_Legs_Sex-000017",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Hanging_Legs_Sex-000017.safetensors"
+        },
+        {
+            "filename": "happy_tentacle-fishjinx-v0.2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\happy_tentacle-fishjinx-v0.2.safetensors"
+        },
+        {
+            "filename": "haremassistedspreading",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\haremassistedspreading.safetensors"
+        },
+        {
+            "filename": "Held_Down-000015",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Held_Down-000015.safetensors"
+        },
+        {
+            "filename": "HighPonytail_PXL_Leaf1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\HighPonytail_PXL_Leaf1.safetensors"
+        },
+        {
+            "filename": "hourglassv2_pony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\hourglassv2_pony.safetensors"
+        },
+        {
+            "filename": "Huge Insertion Bulge pony-v1.0",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Huge Insertion Bulge pony-v1.0.safetensors"
+        },
+        {
+            "filename": "huge_dildo_xl",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\huge_dildo_xl.safetensors"
+        },
+        {
+            "filename": "human_onahole",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\human_onahole.safetensors"
+        },
+        {
+            "filename": "huniepop2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\huniepop2.safetensors"
+        },
+        {
+            "filename": "Insert_Anything",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Insert_Anything.safetensors"
+        },
+        {
+            "filename": "Irelia-10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Irelia-10.safetensors"
+        },
+        {
+            "filename": "Irelia_Classic_v2_PonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Irelia_Classic_v2_PonyXL.safetensors"
+        },
+        {
+            "filename": "Irish_Foxy_Lucy-000016",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Irish_Foxy_Lucy-000016.safetensors"
+        },
+        {
+            "filename": "IvySC6XL-12v2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\IvySC6XL-12v2.safetensors"
+        },
+        {
+            "filename": "JdotKdot_PDXL-v1-10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\JdotKdot_PDXL-v1-10.safetensors"
+        },
+        {
+            "filename": "Jinx_Arcane_-_League_of_Legends_-_UHD_-_Pony-000002",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Jinx_Arcane_-_League_of_Legends_-_UHD_-_Pony-000002.safetensors"
+        },
+        {
+            "filename": "Johnny_Bravo_Style",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Johnny_Bravo_Style.safetensors"
+        },
+        {
+            "filename": "Jump_kick_kick_punch_PACK",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Jump_kick_kick_punch_PACK.safetensors"
+        },
+        {
+            "filename": "kaisa-04",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\kaisa-04.safetensors"
+        },
+        {
+            "filename": "Kaisa",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Kaisa.safetensors"
+        },
+        {
+            "filename": "Kat-000018",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Kat-000018.safetensors"
+        },
+        {
+            "filename": "Katarina_-_League_of_Legends_-_UHD_-_Pony-000002",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Katarina_-_League_of_Legends_-_UHD_-_Pony-000002.safetensors"
+        },
+        {
+            "filename": "KDAAkaliPonyLora.1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\KDAAkaliPonyLora.1.safetensors"
+        },
+        {
+            "filename": "KDAAkaliPonyLora",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\KDAAkaliPonyLora.safetensors"
+        },
+        {
+            "filename": "KDA_Akali",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\KDA_Akali.safetensors"
+        },
+        {
+            "filename": "KDA_Akali_-_UHD_-_Pony-000002",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\KDA_Akali_-_UHD_-_Pony-000002.safetensors"
+        },
+        {
+            "filename": "KDA_Kaisa",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\KDA_Kaisa.safetensors"
+        },
+        {
+            "filename": "Keith_by_IkariRH",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Keith_by_IkariRH.safetensors"
+        },
+        {
+            "filename": "Kimberly_Ann_Kim_Possible",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Kimberly_Ann_Kim_Possible.safetensors"
+        },
+        {
+            "filename": "Kindred10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Kindred10.safetensors"
+        },
+        {
+            "filename": "KindredLoLXL - by KillerUwU13_AI",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\KindredLoLXL - by KillerUwU13_AI.safetensors"
+        },
+        {
+            "filename": "kiyoshiSTXLP",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\kiyoshiSTXLP.safetensors"
+        },
+        {
+            "filename": "KLK_Matoi-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\KLK_Matoi-PONY.safetensors"
+        },
+        {
+            "filename": "KLK_NudistBeach-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\KLK_NudistBeach-PONY.safetensors"
+        },
+        {
+            "filename": "korraSDXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\korraSDXL.safetensors"
+        },
+        {
+            "filename": "KunoichiXL-D10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\KunoichiXL-D10.safetensors"
+        },
+        {
+            "filename": "l4undrym4tXLP",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\l4undrym4tXLP.safetensors"
+        },
+        {
+            "filename": "Large_Insertion",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Large_Insertion.safetensors"
+        },
+        {
+            "filename": "Leaf_suit_Anime",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Leaf_suit_Anime.safetensors"
+        },
+        {
+            "filename": "Lift Spitroast-PonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Lift Spitroast-PonyXL.safetensors"
+        },
+        {
+            "filename": "LoL-Style",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\LoL-Style.safetensors"
+        },
+        {
+            "filename": "LoL_Kindred_a1_12_PonyXL_spnckpt1_th-1.4",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\LoL_Kindred_a1_12_PonyXL_spnckpt1_th-1.4.safetensors"
+        },
+        {
+            "filename": "look_through_bodyx-Ray_v2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\look_through_bodyx-Ray_v2.safetensors"
+        },
+        {
+            "filename": "LoveAhriV1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\LoveAhriV1.safetensors"
+        },
+        {
+            "filename": "Love_Me_Miia",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Love_Me_Miia.safetensors"
+        },
+        {
+            "filename": "lower-abdominal_ruler_v1.1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\lower-abdominal_ruler_v1.1.safetensors"
+        },
+        {
+            "filename": "lower-abdominal_ruler_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\lower-abdominal_ruler_v1.safetensors"
+        },
+        {
+            "filename": "lux-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\lux-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "Lu_ming",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Lu_ming.safetensors"
+        },
+        {
+            "filename": "MamiyaMarie3216XL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\MamiyaMarie3216XL.safetensors"
+        },
+        {
+            "filename": "Masturbation with dildo (pony) v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Masturbation with dildo (pony) v1.safetensors"
+        },
+        {
+            "filename": "Mia_by_IkariRH",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Mia_by_IkariRH.safetensors"
+        },
+        {
+            "filename": "Miss FortunePonyLora",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Miss FortunePonyLora.safetensors"
+        },
+        {
+            "filename": "missionary-on-side-ponyxl-lora-nochekaiser",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\missionary-on-side-ponyxl-lora-nochekaiser.safetensors"
+        },
+        {
+            "filename": "modern_anime_screencap_v1_0",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\modern_anime_screencap_v1_0.safetensors"
+        },
+        {
+            "filename": "muk_pony_v2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\muk_pony_v2.safetensors"
+        },
+        {
+            "filename": "Multiple_handjob_POny",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Multiple_handjob_POny.safetensors"
+        },
+        {
+            "filename": "multiple_insertions_v0.2-pony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\multiple_insertions_v0.2-pony.safetensors"
+        },
+        {
+            "filename": "Muryo-_style",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Muryo-_style.safetensors"
+        },
+        {
+            "filename": "nano_eiaiPDXL_scarxzys",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\nano_eiaiPDXL_scarxzys.safetensors"
+        },
+        {
+            "filename": "neeko-05",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\neeko-05.safetensors"
+        },
+        {
+            "filename": "neonXLP",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\neonXLP.safetensors"
+        },
+        {
+            "filename": "NidaleeLoLXLv2 - by KillerUwU13_AI",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\NidaleeLoLXLv2 - by KillerUwU13_AI.safetensors"
+        },
+        {
+            "filename": "Nier_YorhaA2-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Nier_YorhaA2-PONY.safetensors"
+        },
+        {
+            "filename": "Nier_Zero-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Nier_Zero-PONY.safetensors"
+        },
+        {
+            "filename": "NIKKE_Grave-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\NIKKE_Grave-PONY.safetensors"
+        },
+        {
+            "filename": "Nova TerraPony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Nova TerraPony.safetensors"
+        },
+        {
+            "filename": "NSFW_Tentacles_Pony_V2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\NSFW_Tentacles_Pony_V2.safetensors"
+        },
+        {
+            "filename": "OilSlickPONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\OilSlickPONY.safetensors"
+        },
+        {
+            "filename": "Origami_Inverse",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Origami_Inverse.safetensors"
+        },
+        {
+            "filename": "overhang_xl",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\overhang_xl.safetensors"
+        },
+        {
+            "filename": "OW_WidowmakerAlt-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\OW_WidowmakerAlt-PONY.safetensors"
+        },
+        {
+            "filename": "Pauline_-_Mario_Series",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Pauline_-_Mario_Series.safetensors"
+        },
+        {
+            "filename": "PhoneExposurePonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\PhoneExposurePonyXL.safetensors"
+        },
+        {
+            "filename": "phreniaXLP",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\phreniaXLP.safetensors"
+        },
+        {
+            "filename": "poco_pony_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\poco_pony_v1.safetensors"
+        },
+        {
+            "filename": "poisonivycartoon_pony_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\poisonivycartoon_pony_v1.safetensors"
+        },
+        {
+            "filename": "pole-dancing-from-behind-ponyxl-lora-nochekaiser",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\pole-dancing-from-behind-ponyxl-lora-nochekaiser.safetensors"
+        },
+        {
+            "filename": "pole-dancing-squatting-ponyxl-lora-nochekaiser",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\pole-dancing-squatting-ponyxl-lora-nochekaiser.safetensors"
+        },
+        {
+            "filename": "pole-dancing-standing-split-ponyxl-lora-nochekaiser",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\pole-dancing-standing-split-ponyxl-lora-nochekaiser.safetensors"
+        },
+        {
+            "filename": "ponyEropeanComix_v10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\ponyEropeanComix_v10.safetensors"
+        },
+        {
+            "filename": "PonyXL_Standing_DP",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\PonyXL_Standing_DP.safetensors"
+        },
+        {
+            "filename": "poolpartymf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\poolpartymf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "pool_ladder",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\pool_ladder.safetensors"
+        },
+        {
+            "filename": "PorcelainMissFortune",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\PorcelainMissFortune.safetensors"
+        },
+        {
+            "filename": "Pov_Against_the_Wall_v2.0-000010",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Pov_Against_the_Wall_v2.0-000010.safetensors"
+        },
+        {
+            "filename": "Pov_Cowgirl_Looking_Down_3.0",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Pov_Cowgirl_Looking_Down_3.0.safetensors"
+        },
+        {
+            "filename": "Pov_Sitting_on_lap_[Remake]-000005",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Pov_Sitting_on_lap_[Remake]-000005.safetensors"
+        },
+        {
+            "filename": "Pov_Standing_Doggy_Style__Missionary_looking_up_3.0-000005",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Pov_Standing_Doggy_Style__Missionary_looking_up_3.0-000005.safetensors"
+        },
+        {
+            "filename": "PO_SplicerDoll-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\PO_SplicerDoll-PONY.safetensors"
+        },
+        {
+            "filename": "presenting cum in panties",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\presenting cum in panties.safetensors"
+        },
+        {
+            "filename": "Prestige Star Guardian Syndra",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Prestige Star Guardian Syndra.safetensors"
+        },
+        {
+            "filename": "PrestigeFrightNightZeri",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\PrestigeFrightNightZeri.safetensors"
+        },
+        {
+            "filename": "pubic tattoo_Pony_V1.0",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\pubic tattoo_Pony_V1.0.safetensors"
+        },
+        {
+            "filename": "public-exhibitionism_pdxl_goofy",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\public-exhibitionism_pdxl_goofy.safetensors"
+        },
+        {
+            "filename": "Quadruple_Penetration_-_V2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Quadruple_Penetration_-_V2.safetensors"
+        },
+        {
+            "filename": "reacharoundfootjob-rearfj-pony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\reacharoundfootjob-rearfj-pony.safetensors"
+        },
+        {
+            "filename": "Realistic_cervical_penetration_Pony-000010",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Realistic_cervical_penetration_Pony-000010.safetensors"
+        },
+        {
+            "filename": "RedeemedSGXayahSDXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\RedeemedSGXayahSDXL.safetensors"
+        },
+        {
+            "filename": "reverse_amazon",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\reverse_amazon.safetensors"
+        },
+        {
+            "filename": "reverse_upright_straddle_v0.2-pony.1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\reverse_upright_straddle_v0.2-pony.1.safetensors"
+        },
+        {
+            "filename": "reverse_upright_straddle_v0.2-pony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\reverse_upright_straddle_v0.2-pony.safetensors"
+        },
+        {
+            "filename": "RE_Winters-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\RE_Winters-PONY.safetensors"
+        },
+        {
+            "filename": "RivenNormalPonyLoRA",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\RivenNormalPonyLoRA.safetensors"
+        },
+        {
+            "filename": "Rough_Sex_Any_position",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Rough_Sex_Any_position.safetensors"
+        },
+        {
+            "filename": "Round_Breasts_XL_XV7-000038",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Round_Breasts_XL_XV7-000038.safetensors"
+        },
+        {
+            "filename": "ruinedmf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\ruinedmf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "s1imebl0b",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\s1imebl0b.safetensors"
+        },
+        {
+            "filename": "Samus_Aran__Metroid__PonyXL-000008",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Samus_Aran__Metroid__PonyXL-000008.safetensors"
+        },
+        {
+            "filename": "satoukuukiXL_P6_lokr_V4236",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\satoukuukiXL_P6_lokr_V4236.safetensors"
+        },
+        {
+            "filename": "SC2SeongMina",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\SC2SeongMina.safetensors"
+        },
+        {
+            "filename": "secretagentmf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\secretagentmf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "secymotorcycleposes_dwnsty-000008",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\secymotorcycleposes_dwnsty-000008.safetensors"
+        },
+        {
+            "filename": "Selfie_With_Cock",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Selfie_With_Cock.safetensors"
+        },
+        {
+            "filename": "Sentinel_Irelia_PonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Sentinel_Irelia_PonyXL.safetensors"
+        },
+        {
+            "filename": "sera",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\sera.safetensors"
+        },
+        {
+            "filename": "Serana_shadow_queen",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Serana_shadow_queen.safetensors"
+        },
+        {
+            "filename": "setsukaXL-SC6v10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\setsukaXL-SC6v10.safetensors"
+        },
+        {
+            "filename": "sex_with_arch_back_kiss",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\sex_with_arch_back_kiss.safetensors"
+        },
+        {
+            "filename": "SGKaisaSDXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\SGKaisaSDXL.safetensors"
+        },
+        {
+            "filename": "SGMF",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\SGMF.safetensors"
+        },
+        {
+            "filename": "SGOriSDXL-000040",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\SGOriSDXL-000040.safetensors"
+        },
+        {
+            "filename": "SGSonaSDXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\SGSonaSDXL.safetensors"
+        },
+        {
+            "filename": "SGSyndraV3",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\SGSyndraV3.safetensors"
+        },
+        {
+            "filename": "SGTaliyahSDXL-000040",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\SGTaliyahSDXL-000040.safetensors"
+        },
+        {
+            "filename": "ShaunaPokemonPDXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\ShaunaPokemonPDXL.safetensors"
+        },
+        {
+            "filename": "Shino Sosaki (Mandalay) - Pony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Shino Sosaki (Mandalay) - Pony.safetensors"
+        },
+        {
+            "filename": "Side-by-Side_Cowgirl_position",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Side-by-Side_Cowgirl_position.safetensors"
+        },
+        {
+            "filename": "SitAstrideMotorcyclePony.0.9",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\SitAstrideMotorcyclePony.0.9.safetensors"
+        },
+        {
+            "filename": "slingshotPony_resize",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\slingshotPony_resize.safetensors"
+        },
+        {
+            "filename": "SMNxl-SC6-",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\SMNxl-SC6-.safetensors"
+        },
+        {
+            "filename": "Sonya_Blade_Mk9",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Sonya_Blade_Mk9.safetensors"
+        },
+        {
+            "filename": "SoulCalibur6Tira",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\SoulCalibur6Tira.safetensors"
+        },
+        {
+            "filename": "Spirit_Blossom_Cassiopeia_League_of_Legends",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Spirit_Blossom_Cassiopeia_League_of_Legends.safetensors"
+        },
+        {
+            "filename": "spread_pussy_under_clothes_pdxl_goofy",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\spread_pussy_under_clothes_pdxl_goofy.safetensors"
+        },
+        {
+            "filename": "Spy_X_Family",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Spy_X_Family.safetensors"
+        },
+        {
+            "filename": "squatting_cowgirl_xl",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\squatting_cowgirl_xl.safetensors"
+        },
+        {
+            "filename": "Standing sex (pony) v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Standing sex (pony) v1.safetensors"
+        },
+        {
+            "filename": "standingmiss",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\standingmiss.safetensors"
+        },
+        {
+            "filename": "Standing_Split_Sex_Position_LoRa__PonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Standing_Split_Sex_Position_LoRa__PonyXL.safetensors"
+        },
+        {
+            "filename": "starguardianmf-pdxl-nvwls-v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\starguardianmf-pdxl-nvwls-v1.safetensors"
+        },
+        {
+            "filename": "Star_Guardian_KaiSa_PonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Star_Guardian_KaiSa_PonyXL.safetensors"
+        },
+        {
+            "filename": "Sucking_nipples_Pony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Sucking_nipples_Pony.safetensors"
+        },
+        {
+            "filename": "suizillaXLP",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\suizillaXLP.safetensors"
+        },
+        {
+            "filename": "Sunni_Pony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Sunni_Pony.safetensors"
+        },
+        {
+            "filename": "superdeep",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\superdeep.safetensors"
+        },
+        {
+            "filename": "Suspended DP 6",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Suspended DP 6.safetensors"
+        },
+        {
+            "filename": "Taimanin_Crackle-PONY",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Taimanin_Crackle-PONY.safetensors"
+        },
+        {
+            "filename": "TakiSC6XL-12v2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\TakiSC6XL-12v2.safetensors"
+        },
+        {
+            "filename": "TAKI__The_Soul_Calibur",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\TAKI__The_Soul_Calibur.safetensors"
+        },
+        {
+            "filename": "Tenjou_Tenge",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Tenjou_Tenge.safetensors"
+        },
+        {
+            "filename": "tentacle_blueb-10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\tentacle_blueb-10.safetensors"
+        },
+        {
+            "filename": "towelPony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\towelPony.safetensors"
+        },
+        {
+            "filename": "TwoGirlsRidingSexPony",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\TwoGirlsRidingSexPony.safetensors"
+        },
+        {
+            "filename": "UltimateBunny_t1-000038-128",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\UltimateBunny_t1-000038-128.safetensors"
+        },
+        {
+            "filename": "UmaiXLP",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\UmaiXLP.safetensors"
+        },
+        {
+            "filename": "Uncensored_PonyXL_cpt_v03",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Uncensored_PonyXL_cpt_v03.safetensors"
+        },
+        {
+            "filename": "Under_Fuck_V2.1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Under_Fuck_V2.1.safetensors"
+        },
+        {
+            "filename": "Under_Fuck_V2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Under_Fuck_V2.safetensors"
+        },
+        {
+            "filename": "Upright_front_pony-000010",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Upright_front_pony-000010.safetensors"
+        },
+        {
+            "filename": "upside-down",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\upside-down.safetensors"
+        },
+        {
+            "filename": "Vaginal_tugging_4PonyXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Vaginal_tugging_4PonyXL.safetensors"
+        },
+        {
+            "filename": "vayneXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\vayneXL.safetensors"
+        },
+        {
+            "filename": "Walk-in_caught_by_Fire_Keeper-000004",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\Walk-in_caught_by_Fire_Keeper-000004.safetensors"
+        },
+        {
+            "filename": "XayahXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\XayahXL.safetensors"
+        },
+        {
+            "filename": "xianghuaXL-SC12",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\xianghuaXL-SC12.safetensors"
+        },
+        {
+            "filename": "XLPCharacterDesign_Concept-10V2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\XLPCharacterDesign_Concept-10V2.safetensors"
+        },
+        {
+            "filename": "xtremecumblast",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\xtremecumblast.safetensors"
+        },
+        {
+            "filename": "XXX_GangBang_Pony_V1.1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\XXX_GangBang_Pony_V1.1.safetensors"
+        },
+        {
+            "filename": "XXX_GangBang_Pony_V1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\XXX_GangBang_Pony_V1.safetensors"
+        },
+        {
+            "filename": "yandere_sex_pdxl_goofy",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\yandere_sex_pdxl_goofy.safetensors"
+        },
+        {
+            "filename": "yang_xiaolongPDXL_scarxzys",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\yang_xiaolongPDXL_scarxzys.safetensors"
+        },
+        {
+            "filename": "ZenlessZoneZeroPDXL",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\ZenlessZoneZeroPDXL.safetensors"
+        },
+        {
+            "filename": "[hikari]missionary_holding_wrist_pony_v1",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\pony\\[hikari]missionary_holding_wrist_pony_v1.safetensors"
+        },
+        {
+            "filename": "v3_sd15_adapter",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\SD1.5\\animatediff\\v3_sd15_adapter.ckpt"
+        },
+        {
+            "filename": "actionsketchV2",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\sd15\\actionsketchV2.safetensors"
+        },
+        {
+            "filename": "double penetration-from front",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\sd15\\double penetration-from front.safetensors"
+        },
+        {
+            "filename": "magic_fighting_green_512_15",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\sd15\\magic_fighting_green_512_15.safetensors"
+        },
+        {
+            "filename": "magic_fighting_red_512_dreamshaper_8",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\sd15\\magic_fighting_red_512_dreamshaper_8.safetensors"
+        },
+        {
+            "filename": "MindFlayerA",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\sd15\\MindFlayerA.safetensors"
+        },
+        {
+            "filename": "Pirotess",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\sd15\\Pirotess.safetensors"
+        },
+        {
+            "filename": "Jinx",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\sdxl10\\Jinx.safetensors"
+        },
+        {
+            "filename": "leagueOfLegendsSplashArt_v10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\sdxl10\\leagueOfLegendsSplashArt_v10.safetensors"
+        },
+        {
+            "filename": "Tentaclesdick-10",
+            "path": "C:\\Users\\jmdzi\\git\\Comfy\\common\\models\\loras\\sdxl10\\Tentaclesdick-10.safetensors"
+        }
+    ],
     "favorites": []
 }
